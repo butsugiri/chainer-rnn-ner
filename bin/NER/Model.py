@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 import chainer
 import chainer.links as L
+from chainer.links import NStepLSTM
 
 
-class RNNLM(chainer.Chain):
-    """docstring for RNNLM."""
+class NERTagger(chainer.Chain):
+    """docstring for NERTagger."""
 
-    def __init__(self, vocab, embed_dim):
-        n_vocab = len(vocab)
-        super(RNNLM, self).__init__(
+    def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim):
+        super(NERTagger, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
-            l1=L.LSTM(embed_dim, embed_dim),
-            l2=L.Linear(embed_dim, n_vocab),
+            l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0.3, use_cudnn=True),
+            l2=L.Linear(embed_dim, n_tag),
         )
-        self.l1.reset_state()
 
-    def __call__(self, x):
-        h0 = self.embed(x)
-        h1 = self.l1(h0)
-        y = self.l2(h1)
+    def __call__(self, xs, hx, cx):
+        lens = [len(x) for x in xs]
+        xs = [self.embed(item) for item in xs]
+        hy, cy, ys = self.l1(hx, cx, xs, train=False)
+        y = [self.l2(item) for item in ys]
         return y
 
     def reset_state(self):

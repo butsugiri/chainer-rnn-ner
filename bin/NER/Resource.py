@@ -20,8 +20,8 @@ class Resource(object):
         self.config["vocab_path"] = self.config['input'] + "vocab.txt"
         self.config["time"] = time
 
-        os.mkdir("../../result/" + time)
-        self.config["log_path"] = "../../result/" + time + "/stats.json"
+        os.mkdir("../result/" + time)
+        self.config["log_path"] = "../result/" + time + "/stats.json"
 
         # snapshot用のディレクトリを準備
-        os.mkdir("../../result/" + time + "/model_files/")
+        os.mkdir("../result/" + time + "/model_files/")

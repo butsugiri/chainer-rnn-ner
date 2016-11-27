@@ -6,13 +6,15 @@ import chainer.links as L
 import chainer.serializers as S
 import numpy as np
 from chainer import cuda
-from Model import RNNLM
-from DataProcessor import DataProcessor
+from .Model import NERTagger
+from .DataProcessor import DataProcessor
 from datetime import datetime
+
+class Classifier(chainer.link.Chain):
+    pass
 
 
 class Trainer(object):
-    # TODO: perplexity: https://github.com/pfnet/chainer/blob/0fdd6bacbe3a0f48bbcc394f00d257a2d40c4459/examples/ptb/train_ptb.py
 
     def __init__(self, config):
         self.config = config
@@ -29,8 +31,10 @@ class Trainer(object):
             "time_taken": [], "perplexity": []}
         self.result_storage["hyper_params"] = config
 
-        self.model = L.Classifier(
-            RNNLM(vocab=self.data_processor.vocab, embed_dim=config["embed_dim"]))
+        # self.model = L.Classifier(
+        #     NERTagger(vocab=self.data_processor.vocab, embed_dim=config["embed_dim"]))
+        self.model = NERTagger(n_vocab=len(self.data_processor.vocab), embed_dim=config["embed_dim"],
+        hidden_dim=config["hidden_dim"], n_tag=len(self.data_processor.tag))
         self.model.compute_accuracy = False
         if self.use_gpu >= 0:
             chainer.cuda.get_device(self.use_gpu).use()  # make the GPU current
@@ -39,17 +43,35 @@ class Trainer(object):
         self.optimizer = chainer.optimizers.Adam()
         self.optimizer.setup(self.model)
 
+        if self.use_gpu >= 0:
+            self.xp = cuda.cupy
+        else:
+            self.xp = np
+
     def run(self):
-        for epoch in xrange(self.epoch):
+        for epoch in range(self.epoch):
             sys.stderr.write("Currently @ Epoch:{epoch}\n".format(epoch=epoch))
             self.epoch_start_time = datetime.now()
-            for batch in self.data_processor.batch_iter():
-                accum_loss = 0
+            for xs, ts in self.data_processor.batch_iter():
+                # print(xs)
+                # print(ts)
+                hx = chainer.Variable(
+                self.xp.zeros((1, len(xs), self.config["hidden_dim"]), dtype=self.xp.float32))
+                cx = chainer.Variable(
+                self.xp.zeros((1, len(xs), self.config["hidden_dim"]), dtype=self.xp.float32))
+                y = self.model(xs, hx, cx)
+
+                exit()
+
+
+
+
+
+
                 for curr_words, next_words in zip(batch.T, batch[:, 1:].T):
                     accum_loss += self.model(curr_words, next_words)
                 self.optimizer.target.cleargrads()
                 accum_loss.backward()
-                accum_loss.unchain_backward()
                 self.optimizer.update()
                 self.model.predictor.reset_state()
             self.epoch_end_time = datetime.now()
