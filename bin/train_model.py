@@ -73,9 +73,9 @@ class MyUpdater(training.StandardUpdater):
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
-            self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
+            self.xp.zeros((1, len(xs), self.batchsize), dtype=self.xp.float32))
         cx = chainer.Variable(
-            self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
+            self.xp.zeros((1, len(xs), self.batchsize), dtype=self.xp.float32))
         loss, accuracy, count = optimizer.target(xs, hx, cx, ts, train=True)
         loss.backward()
         optimizer.update()
@@ -101,9 +101,9 @@ class MyEvaluator(extensions.Evaluator):
                 xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
                 ts = [self.xp.array(x[1], dtype=self.xp.int32) for x in batch]
                 hx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
+                    self.xp.zeros((1, len(xs), self.batchsize), dtype=self.xp.float32))
                 cx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
+                    self.xp.zeros((1, len(xs), self.batchsize), dtype=self.xp.float32))
                 loss = target(xs, hx, cx, ts, train=False)
 
             summary.add(observation)
