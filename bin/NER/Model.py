@@ -15,17 +15,7 @@ class NERTagger(chainer.Chain):
         )
 
     def __call__(self, xs, hx, cx, train=True):
-        lens = [len(x) for x in xs]
         xs = [self.embed(item) for item in xs]
         hy, cy, ys = self.l1(hx, cx, xs, train=train)
         y = [self.l2(item) for item in ys]
         return y
-
-    def reset_state(self):
-        self.l1.reset_state()
-
-    def set_state(self, c, h):
-        self.l1.set_state(c, h)
-
-    def get_state(self):
-        return (self.l1.c, self.l1.h)
