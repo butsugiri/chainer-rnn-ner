@@ -109,22 +109,28 @@ class Trainer(object):
 
 
     def _evaluate(self, epoch):
-        for xs, ts in self.data_processor.batch_iter(train=True):
+        print("Validation at Epoch {}".format(epoch))
+        for xs, ts in self.data_processor.batch_iter(train=False):
             hx = chainer.Variable(
                 self.xp.zeros((1, len(xs), self.config["hidden_dim"]), dtype=self.xp.float32))
             cx = chainer.Variable(
                 self.xp.zeros((1, len(xs), self.config["hidden_dim"]), dtype=self.xp.float32))
-            ys = self.model.predictor(xs, hx, cx, train=False)
-            for yi, xi, ti in zip(ys, xs, ts):
-                pred = F.argmax(F.softmax(yi), axis=1).data
-                pred_tags = [self.data_processor.id2tag[i] for i in pred]
-                print(" ".join(pred_tags))
-
-                targets = [self.data_processor.id2tag[i] for i in ti]
-                print(" ".join(targets))
-
-                # terms = [self.data_processor.id2vocab[i] for i in xi]
-                # print(" ".join(terms))
+            loss, acc, count = self.model(xs, hx, cx, ts)
+            sum_loss += loss.data
+            sum_acc += acc.data
+            sum_count += count
+            print("{}\t{}\t{}".format(sum_acc/sum_count, sum_loss, sum_count))
+            # ys = self.model.predictor(xs, hx, cx, train=False)
+            # for yi, xi, ti in zip(ys, xs, ts):
+            #     pred = F.argmax(F.softmax(yi), axis=1).data
+            #     pred_tags = [self.data_processor.id2tag[i] for i in pred]
+            #     print(" ".join(pred_tags))
+            #
+            #     targets = [self.data_processor.id2tag[i] for i in ti]
+            #     print(" ".join(targets))
+            #
+            #     # terms = [self.data_processor.id2vocab[i] for i in xi]
+            #     # print(" ".join(terms))
 
     def _save_stats(self):
         """
