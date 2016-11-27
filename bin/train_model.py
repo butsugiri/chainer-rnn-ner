@@ -150,10 +150,10 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train, batch_size=args.batchsize)
     dev_iter = chainer.iterators.SerialIterator(dev, batch_size=args.batchsize, repeat=False)
 
-    updater = MyUpdater(train_iter, optimizer, device=args.gpu, batchsize=args.gpu)
+    updater = MyUpdater(train_iter, optimizer, device=args.gpu, batchsize=args.batchsize)
     trainer = training.Trainer(updater, (10, 'epoch'), out="result")
 
-    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu, batchsize=args.gpu))
+    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu, batchsize=args.batchsize))
     trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
 
     trainer.extend(extensions.ProgressBar(update_interval=100))
