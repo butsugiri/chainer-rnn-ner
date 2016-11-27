@@ -60,19 +60,22 @@ class MyUpdater(training.StandardUpdater):
     def __init__(self, iterator, optimizer, device, batchsize):
         super(MyUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
         if device >= 0:
-            xp = cuda.cupy
+            self.xp = cuda.cupy
+        else:
+            self.xp = xp
+        self.batchsize = batchsize
 
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
-        xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
-        ts = [xp.array(x[1], dtype=xp.int32) for x in batch]
+        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
+        ts = [self.xp.array(x[1], dtype=self.xp.int32) for x in batch]
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
-            xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
+            self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
         cx = chainer.Variable(
-            xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
+            self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
         loss, accuracy, count = optimizer.target(xs, hx, cx, ts, train=True)
         loss.backward()
         optimizer.update()
@@ -81,7 +84,10 @@ class MyEvaluator(extensions.Evaluator):
     def __init__(self, iterator, target, device, batchsize):
         super(MyEvaluator, self).__init__(iterator=iterator, target=target, device=device)
         if device >= 0:
-            xp = cuda.cupy
+            self.xp = cuda.cupy
+        else:
+            self.xp = xp
+        self.batchsize = batchsize
 
     def evaluate(self):
         iterator = self._iterators['main']
@@ -92,12 +98,12 @@ class MyEvaluator(extensions.Evaluator):
         for batch in it:
             observation = {}
             with reporter.report_scope(observation):
-                xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
-                ts = [xp.array(x[1], dtype=xp.int32) for x in batch]
+                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
+                ts = [self.xp.array(x[1], dtype=self.xp.int32) for x in batch]
                 hx = chainer.Variable(
-                    xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
+                    self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
                 cx = chainer.Variable(
-                    xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
+                    self.xp.zeros((1, len(xs), batchsize), dtype=self.xp.float32))
                 loss = target(xs, hx, cx, ts, train=False)
 
             summary.add(observation)
