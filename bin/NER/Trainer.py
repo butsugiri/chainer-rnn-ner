@@ -104,12 +104,15 @@ class Trainer(object):
                 self.optimizer.update()
 
             print("{}\t{}\t{}".format(sum_acc/sum_count, sum_loss, sum_count))
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 5 == 0:
                 self._evaluate(epoch)
 
 
     def _evaluate(self, epoch):
         print("Validation at Epoch {}".format(epoch))
+        sum_loss = 0
+        sum_acc = 0
+        sum_count = 0
         for xs, ts in self.data_processor.batch_iter(train=False):
             hx = chainer.Variable(
                 self.xp.zeros((1, len(xs), self.config["hidden_dim"]), dtype=self.xp.float32))
