@@ -8,11 +8,50 @@ from chainer import training
 from chainer import reporter
 from chainer.training import extensions
 
-from NER.Trainer import Classifier
 from NER import Resource
 from NER import NERTagger
 from NER import DataProcessor
 import numpy as xp
+
+
+class Classifier(chainer.link.Chain):
+    compute_accuracy = True
+
+    def __init__(self, predictor, lossfun=F.softmax_cross_entropy,
+                 accfun=F.accuracy):
+        super(Classifier, self).__init__(predictor=predictor)
+        self.lossfun = lossfun
+        self.accfun = accfun
+        self.y = None
+        self.loss = None
+        self.accuracy = None
+
+    def __call__(self, *args, train=True):
+        assert len(args) >= 2
+        x = args[:-1]
+        t = args[-1]
+        self.y = None
+        self.loss = None
+        self.accuracy = None
+        self.y = self.predictor(*x, train)
+        for yi, ti, in zip(self.y, t):
+            if self.loss is not None:
+                self.loss += self.lossfun(yi, ti)
+            else:
+                self.loss = self.lossfun(yi, ti)
+        reporter.report({'loss': self.loss}, self)
+
+        count = 0
+        if self.compute_accuracy:
+            for yi, ti in zip(self.y, t):
+                if self.accuracy is not None:
+                    self.accuracy += self.accfun(yi, ti) * len(ti)
+                    count += len(ti)
+                else:
+                    self.accuracy = self.accfun(yi, ti) * len(ti)
+                    count += len(ti)
+            reporter.report({'accuracy': self.accuracy / count}, self)
+        return self.loss, self.accuracy, count
 
 
 class MyUpdater(training.StandardUpdater):
