@@ -110,6 +110,9 @@ def main():
     ))
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
+    if args.gpu >= 0:
+        chainer.cuda.get_device(args.gpu).use()  # make the GPU current
+        model.to_gpu()
 
     train = data_processor.train_data
     dev = data_processor.dev_data
