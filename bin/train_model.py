@@ -56,8 +56,10 @@ class Classifier(chainer.link.Chain):
 
 class MyUpdater(training.StandardUpdater):
 
-    def __init__(self, iterator, optimizer):
+    def __init__(self, iterator, optimizer, device):
         super(MyUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        if device >= 0:
+            xp = cuda.cupy
 
     def update_core(self):
         batch = self._iterators['main'].next()
@@ -77,6 +79,8 @@ class MyUpdater(training.StandardUpdater):
 class MyEvaluator(extensions.Evaluator):
     def __init__(self, iterator, target, device):
         super(MyEvaluator, self).__init__(iterator=iterator, target=target, device=device)
+        if device >= 0:
+            xp = cuda.cupy
 
     def evaluate(self):
         iterator = self._iterators['main']
@@ -139,7 +143,7 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train, batch_size=args.batchsize)
     dev_iter = chainer.iterators.SerialIterator(dev, batch_size=args.batchsize, repeat=False)
 
-    updater = MyUpdater(train_iter, optimizer)
+    updater = MyUpdater(train_iter, optimizer, device=args.gpu)
     trainer = training.Trainer(updater, (10, 'epoch'), out="result")
 
     trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu))
