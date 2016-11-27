@@ -99,13 +99,32 @@ class MyEvaluator(extensions.Evaluator):
         return summary.compute_mean()
 
 def main():
-    data_processor = DataProcessor(data_path="../work/", use_gpu=-1)
-    data_processor.prepare(test=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--batchsize', '-b', type=int, default=20,
+                        help='Number of examples in each mini-batch')
+    parser.add_argument('--epoch', '-e', type=int, default=30,
+                        help='Number of sweeps over the dataset to train')
+    parser.add_argument('--gpu', '-g', type=int, default=-1,
+                        help='GPU ID (negative value indicates CPU)')
+    parser.add_argument('--gradclip', '-c', type=float, default=5,
+                        help='Gradient norm threshold to clip')
+    parser.add_argument('--out', '-o', default='result',
+                        help='Directory to output the result')
+    parser.add_argument('--resume', '-r', default='',
+                        help='Resume the training from snapshot')
+    parser.add_argument('--test', action='store_true',
+                        help='Use tiny datasets for quick tests')
+    parser.set_defaults(test=False)
+    parser.add_argument('--unit', '-u', type=int, default=100,
+                        help='Number of LSTM units in each layer')
+    args = parser.parse_args()
+    data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu)
+    data_processor.prepare()
 
     model = Classifier(NERTagger(
         n_vocab=len(data_processor.vocab),
-        embed_dim=10,
-        hidden_dim=10,
+        embed_dim=args.unit,
+        hidden_dim=args.unit,
         n_tag=len(data_processor.tag)
     ))
     optimizer = chainer.optimizers.Adam()
@@ -117,16 +136,16 @@ def main():
     train = data_processor.train_data
     dev = data_processor.dev_data
 
-    train_iter = chainer.iterators.SerialIterator(train, batch_size=10)
-    dev_iter = chainer.iterators.SerialIterator(dev, batch_size=10, repeat=False)
+    train_iter = chainer.iterators.SerialIterator(train, batch_size=args.batchsize)
+    dev_iter = chainer.iterators.SerialIterator(dev, batch_size=args.batchsize, repeat=False)
 
     updater = MyUpdater(train_iter, optimizer)
     trainer = training.Trainer(updater, (10, 'epoch'), out="result")
 
-    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=-1))
+    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu))
     trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
 
-    trainer.extend(extensions.ProgressBar(update_interval=10))
+    trainer.extend(extensions.ProgressBar(update_interval=100))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(
         ['epoch', 'main/loss', 'validation/main/loss',
