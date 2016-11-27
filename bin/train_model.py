@@ -57,7 +57,7 @@ class Classifier(chainer.link.Chain):
 
 class MyUpdater(training.StandardUpdater):
 
-    def __init__(self, iterator, optimizer, device):
+    def __init__(self, iterator, optimizer, device, batchsize):
         super(MyUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
         if device >= 0:
             xp = cuda.cupy
@@ -70,15 +70,15 @@ class MyUpdater(training.StandardUpdater):
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
-            xp.zeros((1, len(xs), 10), dtype=xp.float32))
+            xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
         cx = chainer.Variable(
-            xp.zeros((1, len(xs), 10), dtype=xp.float32))
+            xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
         loss, accuracy, count = optimizer.target(xs, hx, cx, ts, train=True)
         loss.backward()
         optimizer.update()
 
 class MyEvaluator(extensions.Evaluator):
-    def __init__(self, iterator, target, device):
+    def __init__(self, iterator, target, device, batchsize):
         super(MyEvaluator, self).__init__(iterator=iterator, target=target, device=device)
         if device >= 0:
             xp = cuda.cupy
@@ -95,9 +95,9 @@ class MyEvaluator(extensions.Evaluator):
                 xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
                 ts = [xp.array(x[1], dtype=xp.int32) for x in batch]
                 hx = chainer.Variable(
-                    xp.zeros((1, len(xs), 10), dtype=xp.float32))
+                    xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
                 cx = chainer.Variable(
-                    xp.zeros((1, len(xs), 10), dtype=xp.float32))
+                    xp.zeros((1, len(xs), batchsize), dtype=xp.float32))
                 loss = target(xs, hx, cx, ts, train=False)
 
             summary.add(observation)
@@ -144,10 +144,10 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train, batch_size=args.batchsize)
     dev_iter = chainer.iterators.SerialIterator(dev, batch_size=args.batchsize, repeat=False)
 
-    updater = MyUpdater(train_iter, optimizer, device=args.gpu)
+    updater = MyUpdater(train_iter, optimizer, device=args.gpu, batchsize=args.gpu)
     trainer = training.Trainer(updater, (10, 'epoch'), out="result")
 
-    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu))
+    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu), batchsize=args.gpu)
     trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
 
     trainer.extend(extensions.ProgressBar(update_interval=100))
