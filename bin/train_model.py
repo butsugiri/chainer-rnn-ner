@@ -6,6 +6,7 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer import reporter
+from chainer import cuda
 from chainer.training import extensions
 
 from NER import Resource
