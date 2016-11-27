@@ -53,19 +53,3 @@ class DataProcessor(object):
                 targets = [self.tag[x["target"]] for x in tokens]
                 dataset.append((token_ids, targets))
         return dataset
-
-    def batch_iter(self, batch_size=16, shuffle_batch=True, train=True):
-        if train:
-            dataset = self.train_data
-        else:
-            dataset = self.dev_data
-
-        for i in range(0, len(dataset), batch_size):
-            yield [self.xp.array(x[0], dtype=np.int32) for x in dataset[i:i + batch_size]],\
-            [self.xp.array(x[1], dtype=np.int32) for x in dataset[i:i + batch_size]],
-
-            # yield self.xp.array(dataset[i:i + batch_size], dtype=np.int32)
-
-if __name__ == '__main__':
-    data = DataProcessor(data_path="../../work/", use_gpu=-1)
-    data.prepare()

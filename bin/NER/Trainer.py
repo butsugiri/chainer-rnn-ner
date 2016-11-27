@@ -6,7 +6,7 @@ import chainer.links as L
 import chainer.serializers as S
 import chainer.functions as F
 import numpy as np
-from chainer import cuda
+from chainer import cuda, reporter
 from .Model import NERTagger
 from .DataProcessor import DataProcessor
 from datetime import datetime
@@ -37,6 +37,7 @@ class Classifier(chainer.link.Chain):
                 self.loss += self.lossfun(yi, ti)
             else:
                 self.loss = self.lossfun(yi, ti)
+        reporter.report({'loss': self.loss}, self)
 
         count = 0
         if self.compute_accuracy:
@@ -47,6 +48,7 @@ class Classifier(chainer.link.Chain):
                 else:
                     self.accuracy = self.accfun(yi, ti) * len(ti)
                     count += len(ti)
+            reporter.report({'accuracy': self.accuracy / count}, self)
         return self.loss, self.accuracy, count
 
 class Trainer(object):
