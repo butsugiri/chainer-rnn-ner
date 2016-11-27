@@ -25,11 +25,13 @@ class DataProcessor(object):
         sys.stderr.write("loading vocabulary...")
         with open(self.vocab_path, "r") as fi:
             self.vocab = {x.split()[0]: int(x.split()[1]) for x in fi}
+            self.id2vocab = {v: k for k,v in self.vocab.items()}
         sys.stderr.write("done.\n")
 
         sys.stderr.write("loading tags...")
         with open(self.tag_path, "r") as fi:
             self.tag = {x.split()[0]: int(x.split()[1]) for x in fi}
+            self.id2tag = {v: k for k,v in self.tag.items()}
         sys.stderr.write("done.\n")
 
         # load train/dev/test data

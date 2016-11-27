@@ -14,10 +14,10 @@ class NERTagger(chainer.Chain):
             l2=L.Linear(embed_dim, n_tag),
         )
 
-    def __call__(self, xs, hx, cx):
+    def __call__(self, xs, hx, cx, train=True):
         lens = [len(x) for x in xs]
         xs = [self.embed(item) for item in xs]
-        hy, cy, ys = self.l1(hx, cx, xs, train=False)
+        hy, cy, ys = self.l1(hx, cx, xs, train=train)
         y = [self.l2(item) for item in ys]
         return y
 
