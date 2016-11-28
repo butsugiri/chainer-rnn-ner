@@ -25,3 +25,9 @@ class Resource(object):
 
         # snapshot用のディレクトリを準備
         os.mkdir("../result/" + time + "/model_files/")
+
+    def get_data_source(self):
+        return self.config["input"]
+
+    def get_device_id(self):
+        return self.config["use_gpu"]

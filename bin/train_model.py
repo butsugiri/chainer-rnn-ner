@@ -15,7 +15,7 @@ from NER import DataProcessor
 import numpy as xp
 
 
-class Classifier(chainer.link.Chain):
+class Classifier(chainer.Chain):
     compute_accuracy = True
 
     def __init__(self, predictor, lossfun=F.softmax_cross_entropy,
@@ -80,9 +80,12 @@ class MyUpdater(training.StandardUpdater):
         loss.backward()
         optimizer.update()
 
+
 class MyEvaluator(extensions.Evaluator):
+
     def __init__(self, iterator, target, device, unit):
-        super(MyEvaluator, self).__init__(iterator=iterator, target=target, device=device)
+        super(MyEvaluator, self).__init__(
+            iterator=iterator, target=target, device=device)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -92,7 +95,7 @@ class MyEvaluator(extensions.Evaluator):
     def evaluate(self):
         iterator = self._iterators['main']
         target = self._targets['main']
-        it = copy.copy(iterator) # これがないと1回しかEvaluationが走らない
+        it = copy.copy(iterator)  # これがないと1回しかEvaluationが走らない
         summary = reporter.DictSummary()
         for batch in it:
             observation = {}
@@ -107,6 +110,7 @@ class MyEvaluator(extensions.Evaluator):
 
             summary.add(observation)
         return summary.compute_mean()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -146,14 +150,19 @@ def main():
     train = data_processor.train_data
     dev = data_processor.dev_data
 
-    train_iter = chainer.iterators.SerialIterator(train, batch_size=args.batchsize)
-    dev_iter = chainer.iterators.SerialIterator(dev, batch_size=args.batchsize, repeat=False)
+    train_iter = chainer.iterators.SerialIterator(
+        train, batch_size=args.batchsize)
+    dev_iter = chainer.iterators.SerialIterator(
+        dev, batch_size=args.batchsize, repeat=False)
 
     updater = MyUpdater(train_iter, optimizer, device=args.gpu, unit=args.unit)
-    trainer = training.Trainer(updater, (10, 'epoch'), out="result")
+    trainer = training.Trainer(updater, (args.epoch, 'epoch'), out="result")
 
-    trainer.extend(MyEvaluator(dev_iter, optimizer.target, device=args.gpu, unit=args.unit))
+    trainer.extend(MyEvaluator(dev_iter, optimizer.target,
+                               device=args.gpu, unit=args.unit))
     trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
+    trainer.extend(extensions.snapshot_object(
+        model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
 
     trainer.extend(extensions.ProgressBar(update_interval=100))
     trainer.extend(extensions.LogReport())
