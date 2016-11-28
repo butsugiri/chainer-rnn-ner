@@ -160,7 +160,7 @@ def main():
 
     trainer.extend(MyEvaluator(dev_iter, optimizer.target,
                                device=args.gpu, unit=args.unit))
-    trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
+    # trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
 
