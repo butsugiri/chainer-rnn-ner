@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 import copy
 import argparse
 import chainer
@@ -8,9 +9,10 @@ from chainer import training
 from chainer import reporter
 from chainer import cuda
 from chainer.training import extensions
+from datetime import datetime
 
 from NER import Resource
-from NER import NERTagger
+from NER import NERTagger, BiNERTagger
 from NER import DataProcessor
 import numpy as xp
 
@@ -131,16 +133,42 @@ def main():
     parser.set_defaults(test=False)
     parser.add_argument('--unit', '-u', type=int, default=100,
                         help='Number of LSTM units in each layer')
+    parser.add_argument('--glove', type=str, default="",
+                        help='path to glove vector')
+    parser.add_argument('--dropout', action='store_true',
+                        help='use dropout?')
+    parser.set_defaults(dropout=False)
+    parser.add_argument('--bilstm', action='store_true',
+                        help='use bi-lstm?')
+    parser.set_defaults(dropout=False)
     args = parser.parse_args()
-    data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu)
+    data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu, test=args.test)
     data_processor.prepare()
 
-    model = Classifier(NERTagger(
-        n_vocab=len(data_processor.vocab),
-        embed_dim=args.unit,
-        hidden_dim=args.unit,
-        n_tag=len(data_processor.tag)
-    ))
+    if args.bilstm:
+        model = Classifier(BiNERTagger(
+            n_vocab=len(data_processor.vocab),
+            embed_dim=args.unit,
+            hidden_dim=args.unit,
+            n_tag=len(data_processor.tag),
+            dropout=args.dropout
+        ))
+    else:
+        model = Classifier(NERTagger(
+            n_vocab=len(data_processor.vocab),
+            embed_dim=args.unit,
+            hidden_dim=args.unit,
+            n_tag=len(data_processor.tag),
+            dropout=args.dropout
+        ))
+
+    # load glove vector
+    if args.glove:
+        sys.stderr.write("loading glove...")
+        model.predictor.load_glove(args.glove, data_processor.vocab)
+        sys.stderr.write("done.")
+
+
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
     if args.gpu >= 0:
@@ -156,7 +184,8 @@ def main():
         dev, batch_size=args.batchsize, repeat=False)
 
     updater = MyUpdater(train_iter, optimizer, device=args.gpu, unit=args.unit)
-    trainer = training.Trainer(updater, (args.epoch, 'epoch'), out="result")
+    trainer = training.Trainer(updater, (args.epoch, 'epoch'), \
+                               out="../result/" + datetime.now().strftime('%Y%m%d_%H_%M_%S'))
 
     trainer.extend(MyEvaluator(dev_iter, optimizer.target,
                                device=args.gpu, unit=args.unit))

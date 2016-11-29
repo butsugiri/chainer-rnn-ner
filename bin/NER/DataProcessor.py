@@ -8,19 +8,20 @@ from collections import defaultdict
 
 class DataProcessor(object):
 
-    def __init__(self, data_path, use_gpu):
+    def __init__(self, data_path, use_gpu, test):
         self.train_data_path = data_path + "train.clean"
         self.dev_data_path = data_path + "dev.clean"
         self.test_data_path = data_path + "test.clean"
         self.vocab_path = data_path + "vocab.txt"
         self.tag_path = data_path + "ner_tags.txt"
+        self.test = test # whether to provide tiny datasets for quick test
 
         if use_gpu >= 0:
             self.xp = cuda.cupy
         else:
             self.xp = np
 
-    def prepare(self, test=False):
+    def prepare(self):
         # load vocabulary
         sys.stderr.write("loading vocabulary...")
         with open(self.vocab_path, "r") as fi:
@@ -39,9 +40,9 @@ class DataProcessor(object):
         self.train_data = self._load_dataset(self.train_data_path)
         self.dev_data = self._load_dataset(self.dev_data_path)
         self.test_data = self._load_dataset(self.test_data_path)
-        if test:
+        if self.test:
             self.train_data = self.train_data[:100]
-            self.dev_data = self.dev_data[:100]
+            self.dev_data = self.dev_data[:10]
         sys.stderr.write("done.\n")
 
     def _load_dataset(self, path):
