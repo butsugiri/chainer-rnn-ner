@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
+import json
 import copy
 import argparse
 import chainer
@@ -142,6 +144,14 @@ def main():
                         help='use bi-lstm?')
     parser.set_defaults(bilstm=False)
     args = parser.parse_args()
+
+    # save configurations to file
+    start_time = datetime.now().strftime('%Y%m%d_%H_%M_%S')
+    dest = "../result/" + start_time
+    os.makedirs(dest)
+    with open(os.path.join(dest, "settings.json"), "w") as fo:
+        fo.write(json.dumps(vars(args),  sort_keys=True, indent=4))
+
     data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu, test=args.test)
     data_processor.prepare()
 
@@ -185,7 +195,7 @@ def main():
 
     updater = MyUpdater(train_iter, optimizer, device=args.gpu, unit=args.unit)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), \
-                               out="../result/" + datetime.now().strftime('%Y%m%d_%H_%M_%S'))
+                               out="../result/" + start_time)
 
     trainer.extend(MyEvaluator(dev_iter, optimizer.target,
                                device=args.gpu, unit=args.unit))
