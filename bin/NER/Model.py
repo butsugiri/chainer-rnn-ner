@@ -12,7 +12,7 @@ class NERTagger(chainer.Chain):
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
         super(NERTagger, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
-            l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0.3, use_cudnn=True),
+            l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim, n_tag),
         )
         if dropout:
@@ -44,8 +44,8 @@ class BiNERTagger(chainer.Chain):
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
         super(BiNERTagger, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
-            forward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0.3, use_cudnn=True),
-            backward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0.3, use_cudnn=True),
+            forward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
+            backward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim * 2, n_tag),
         )
         if dropout:
