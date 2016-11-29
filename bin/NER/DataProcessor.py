@@ -38,6 +38,7 @@ class DataProcessor(object):
         sys.stderr.write("loading dataset...")
         self.train_data = self._load_dataset(self.train_data_path)
         self.dev_data = self._load_dataset(self.dev_data_path)
+        self.test_data = self._load_dataset(self.test_data_path)
         if test:
             self.train_data = self.train_data[:100]
             self.dev_data = self.dev_data[:100]
