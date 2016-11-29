@@ -140,7 +140,7 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--bilstm', action='store_true',
                         help='use bi-lstm?')
-    parser.set_defaults(dropout=False)
+    parser.set_defaults(bilstm=False)
     args = parser.parse_args()
     data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu, test=args.test)
     data_processor.prepare()
@@ -193,7 +193,7 @@ def main():
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
 
-    trainer.extend(extensions.ProgressBar(update_interval=100))
+    trainer.extend(extensions.ProgressBar(update_interval=10))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(
         ['epoch', 'main/loss', 'validation/main/loss',
