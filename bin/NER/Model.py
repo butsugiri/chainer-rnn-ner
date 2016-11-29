@@ -5,12 +5,25 @@ import chainer.links as L
 import chainer.functions as F
 from chainer.links import NStepLSTM
 
+class TaggerBase(chainer.Chain):
+    def __init__(self):
+        pass
 
-class NERTagger(chainer.Chain):
-    """docstring for NERTagger."""
+    # このメソッドは単方向・双方向LSTMで使いたい
+    def load_glove(self, path, vocab):
+        with open(path, "r") as fi:
+            for line in fi:
+                line_list = line.strip().split(" ")
+                word = line_list[0]
+                if word in vocab:
+                    vec = self.xp.array(line_list[1::], dtype=np.float32)
+                    self.embed.W.data[vocab[word]] = vec
+
+class NERTagger(TaggerBase):
+    """single LSTM"""
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
-        super(NERTagger, self).__init__(
+        super(TaggerBase, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim, n_tag),
@@ -28,21 +41,12 @@ class NERTagger(chainer.Chain):
         y = [self.l2(item) for item in ys]
         return y
 
-    def load_glove(self, path, vocab):
-        with open(path, "r") as fi:
-            for line in fi:
-                line_list = line.strip().split(" ")
-                word = line_list[0]
-                if word in vocab:
-                    vec = self.xp.array(line_list[1::], dtype=np.float32)
-                    self.embed.W.data[vocab[word]] = vec
 
-
-class BiNERTagger(chainer.Chain):
-    """docstring for BiNERTagger."""
+class BiNERTagger(TaggerBase):
+    """bi-directional LSTM"""
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
-        super(BiNERTagger, self).__init__(
+        super(TaggerBase, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             forward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             backward_l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
@@ -63,13 +67,3 @@ class BiNERTagger(chainer.Chain):
         ys = [F.concat([forward, backward], axis=1) for forward, backward in zip(forward_ys, backward_ys)]
         y = [self.l2(item) for item in ys]
         return y
-
-
-    def load_glove(self, path, vocab):
-        with open(path, "r") as fi:
-            for line in fi:
-                line_list = line.strip().split(" ")
-                word = line_list[0]
-                if word in vocab:
-                    vec = self.xp.array(line_list[1::], dtype=np.float32)
-                    self.embed.W.data[vocab[word]] = vec

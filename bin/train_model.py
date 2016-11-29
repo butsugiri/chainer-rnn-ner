@@ -164,9 +164,9 @@ def main():
 
     # load glove vector
     if args.glove:
-        sys.stderr.flush("loading glove…")
+        sys.stderr.write("loading glove…")
         model.predictor.load_glove(args.glove, data_processor.vocab)
-        sys.stderr.flush("done.\n")
+        sys.stderr.write("done.\n")
 
 
     optimizer = chainer.optimizers.Adam()
