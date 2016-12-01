@@ -18,5 +18,3 @@ class TrainerUI(training.Trainer):
             updater=updater,
             stop_trigger=(total_epoch, 'epoch')
         )
-        pass
-    pass

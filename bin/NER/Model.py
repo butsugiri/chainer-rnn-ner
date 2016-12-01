@@ -63,7 +63,7 @@ class BiNERTagger(TaggerBase):
         if self.dropout and train:
             xs = [F.dropout(item) for item in xs]
         forward_hy, forward_cy, forward_ys = self.forward_l1(hx, cx, xs, train=train) #don't use dropout
-        backward_hy, backward_cy, backward_ys = self.backward_l1(hx, cx, xs, train=train) #don't use dropout
-        ys = [F.concat([forward, backward], axis=1) for forward, backward in zip(forward_ys, backward_ys)]
+        backward_hy, backward_cy, backward_ys = self.backward_l1(hx, cx, xs[::-1], train=train) #don't use dropout
+        ys = [F.concat([forward, backward], axis=1) for forward, backward in zip(forward_ys, backward_ys[::-1])]
         y = [self.l2(item) for item in ys]
         return y
