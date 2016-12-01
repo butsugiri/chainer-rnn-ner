@@ -60,10 +60,15 @@ class BiNERTagger(TaggerBase):
 
     def __call__(self, xs, hx, cx, train=True):
         xs = [self.embed(item) for item in xs]
+        xs_backward = [item[::-1] for item in xs]
+
+        # print(xs[0].data)
+        # print(xs[0].data.shape)
+        # exit()
         if self.dropout and train:
             xs = [F.dropout(item) for item in xs]
         forward_hy, forward_cy, forward_ys = self.forward_l1(hx, cx, xs, train=train) #don't use dropout
-        backward_hy, backward_cy, backward_ys = self.backward_l1(hx, cx, xs[::-1], train=train) #don't use dropout
-        ys = [F.concat([forward, backward], axis=1) for forward, backward in zip(forward_ys, backward_ys[::-1])]
+        backward_hy, backward_cy, backward_ys = self.backward_l1(hx, cx, xs_backward, train=train) #don't use dropout
+        ys = [F.concat([forward, backward[::-1]], axis=1) for forward, backward in zip(forward_ys, backward_ys)]
         y = [self.l2(item) for item in ys]
         return y
