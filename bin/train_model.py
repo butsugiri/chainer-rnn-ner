@@ -14,7 +14,7 @@ from chainer.training import extensions
 from datetime import datetime
 
 from NER import Resource
-from NER import NERTagger, BiNERTagger
+from NER import NERTagger, BiNERTagger, BiCharNERTagger
 from NER import DataProcessor
 import numpy as xp
 
@@ -73,14 +73,17 @@ class MyUpdater(training.StandardUpdater):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
         xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-        ts = [self.xp.array(x[1], dtype=self.xp.int32) for x in batch]
+        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+        # print([x for sample in batch for x in sample[1]])
+        xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
 
         optimizer.target.cleargrads()
+        # TODO:後方互換が破壊された
         hx = chainer.Variable(
-            self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
+            self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
         cx = chainer.Variable(
-            self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
-        loss, accuracy, count = optimizer.target(xs, hx, cx, ts, train=True)
+            self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
+        loss, accuracy, count = optimizer.target(xs, hx, cx, xxs, ts, train=True)
         loss.backward()
         optimizer.update()
 
@@ -105,12 +108,14 @@ class MyEvaluator(extensions.Evaluator):
             observation = {}
             with reporter.report_scope(observation):
                 xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-                ts = [self.xp.array(x[1], dtype=self.xp.int32) for x in batch]
+                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
                 hx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
+                    self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
                 cx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
-                loss = target(xs, hx, cx, ts, train=False)
+                    self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
+                xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
+
+                loss = target(xs, hx, cx, xxs, ts, train=False)
 
             summary.add(observation)
         return summary.compute_mean()
@@ -156,8 +161,9 @@ def main():
     data_processor.prepare()
 
     if args.bilstm:
-        model = Classifier(BiNERTagger(
+        model = Classifier(BiCharNERTagger(
             n_vocab=len(data_processor.vocab),
+            n_char=len(data_processor.char),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),

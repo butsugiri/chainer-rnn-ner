@@ -66,7 +66,7 @@ def main():
     id2vocab = data.id2vocab
     for batch in test_iter:
         xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
-        ts = [xp.array(x[1], dtype=xp.int32) for x in batch]
+        ts = [xp.array(x[2], dtype=xp.int32) for x in batch]
         hx = chainer.Variable(
             xp.zeros((1, len(xs), args.unit), dtype=xp.float32))
         cx = chainer.Variable(

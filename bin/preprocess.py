@@ -19,6 +19,7 @@ def main(fi):
             for line in section:
                 target, surface, pos, chunk = line.strip().split("\t")
                 token = {
+                    "raw": surface,
                     "surface": surface.lower(),
                     "pos": pos,
                     "target": target

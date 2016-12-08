@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 import sys
 import json
 import numpy as np
@@ -14,6 +14,7 @@ class DataProcessor(object):
         self.test_data_path = data_path + "test.clean"
         self.vocab_path = data_path + "vocab.txt"
         self.tag_path = data_path + "ner_tags.txt"
+        self.char_path = data_path + "char.txt"
         self.test = test # whether to provide tiny datasets for quick test
 
         if use_gpu >= 0:
@@ -27,6 +28,12 @@ class DataProcessor(object):
         with open(self.vocab_path, "r") as fi:
             self.vocab = {x.split()[0]: int(x.split()[1]) for x in fi}
             self.id2vocab = {v: k for k,v in self.vocab.items()}
+        sys.stderr.write("done.\n")
+
+        sys.stderr.write("loading characters...")
+        with open(self.char_path, "r") as fi:
+            self.char = {x.split()[0]: int(x.split()[1]) for x in fi}
+            self.id2char = {v: k for k,v in self.char.items()}
         sys.stderr.write("done.\n")
 
         sys.stderr.write("loading tags...")
@@ -53,5 +60,11 @@ class DataProcessor(object):
                 token_ids = [self.vocab[x["surface"]] if x["surface"] in self.vocab else self.vocab[
                     x["pos"] + "<UNK>"] for x in tokens]
                 targets = [self.tag[x["target"]] for x in tokens]
-                dataset.append((token_ids, targets))
+
+                chars = [[self.char[t] if t in self.char else self.char["<UNK>"] for t in token["raw"]] for token in tokens]
+                dataset.append((token_ids, chars, targets))
         return dataset
+
+if __name__ == '__main__':
+    data = DataProcessor("../../work/", -1, True)
+    data.prepare()
