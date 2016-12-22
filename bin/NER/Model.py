@@ -104,7 +104,7 @@ class BiCharNERTagger(TaggerBase):
             _, __, forward_char_encs = self.forward_char(hhx, ccx, forward)
             _, __, backward_char_encs = self.backward_char(hhx, ccx, backward)
             forward_encodings.append([x[-1] for x in forward_char_encs])
-            backward_encodings.append([x[-1] for x in forward_char_encs])
+            backward_encodings.append([x[-1] for x in backward_char_encs])
 
         forward_encodings = [F.vstack(x) for x in forward_encodings]
         backward_encodings = [F.vstack(x) for x in backward_encodings]
