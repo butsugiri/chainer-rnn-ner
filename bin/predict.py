@@ -68,10 +68,11 @@ def main():
     for batch in test_iter:
         xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
         ts = [xp.array(x[2], dtype=xp.int32) for x in batch]
+        xxs = [[xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
         hx = chainer.Variable(
-            xp.zeros((1, len(xs), args.unit), dtype=xp.float32))
+            xp.zeros((1, len(xs), args.unit+50), dtype=xp.float32))
         cx = chainer.Variable(
-            xp.zeros((1, len(xs), args.unit), dtype=xp.float32))
+            xp.zeros((1, len(xs), args.unit+50), dtype=xp.float32))
         ys = model.predictor(xs, hx, cx, train=False)
 
         for y, t in zip(ys, ts):
