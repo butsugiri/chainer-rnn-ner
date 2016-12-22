@@ -34,6 +34,7 @@ def main():
     if args.bilstm:
         model = Classifier(BiCharNERTagger(
             n_vocab=len(data.vocab),
+            n_char=len(data.char),
             embed_dim=100,
             hidden_dim=args.unit,
             n_tag=len(data.tag),
