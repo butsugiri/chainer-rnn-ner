@@ -73,7 +73,7 @@ def main():
             xp.zeros((1, len(xs), args.unit+50), dtype=xp.float32))
         cx = chainer.Variable(
             xp.zeros((1, len(xs), args.unit+50), dtype=xp.float32))
-        ys = model.predictor(xs, hx, cx, train=False)
+        ys = model.predictor(xs, hx, cx, xxs, train=False)
 
         for y, t in zip(ys, ts):
             pred_ids = F.argmax(F.softmax(y), axis=1).data
