@@ -11,7 +11,7 @@ import chainer.functions as F
 from chainer import training
 from chainer import serializers
 from train_model import Classifier, MyUpdater
-from NER import NERTagger, BiNERTagger
+from NER import NERTagger, BiNERTagger, BiCharNERTagger
 from NER import DataProcessor
 
 
@@ -32,7 +32,7 @@ def main():
     data.prepare()
 
     if args.bilstm:
-        model = Classifier(BiNERTagger(
+        model = Classifier(BiCharNERTagger(
             n_vocab=len(data.vocab),
             embed_dim=100,
             hidden_dim=args.unit,
