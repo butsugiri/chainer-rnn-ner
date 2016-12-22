@@ -68,7 +68,7 @@ def main():
     for batch in test_iter:
         xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
         ts = [xp.array(x[2], dtype=xp.int32) for x in batch]
-        xxs = [[xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
+        xxs = [[xp.array(x, dtype=xp.int32) for x in sample[1]] for sample in batch]
         hx = chainer.Variable(
             xp.zeros((1, len(xs), args.unit+50), dtype=xp.float32))
         cx = chainer.Variable(
