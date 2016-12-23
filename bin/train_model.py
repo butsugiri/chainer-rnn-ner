@@ -59,10 +59,37 @@ class Classifier(chainer.Chain):
         return self.loss, self.accuracy, count
 
 
-class MyUpdater(training.StandardUpdater):
+class LSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
-        super(MyUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        super(LSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        if device >= 0:
+            self.xp = cuda.cupy
+        else:
+            self.xp = xp
+        self.unit = unit
+
+    def update_core(self):
+        batch = self._iterators['main'].next()
+        optimizer = self._optimizers['main']
+        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
+        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+
+        optimizer.target.cleargrads()
+        hx = chainer.Variable(
+            self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
+        cx = chainer.Variable(
+            self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
+        loss, accuracy, count = optimizer.target(
+            xs, hx, cx, ts, train=True)
+        loss.backward()
+        optimizer.update()
+
+
+class CharLSTMUpdater(training.StandardUpdater):
+
+    def __init__(self, iterator, optimizer, device, unit):
+        super(CharLSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -75,23 +102,25 @@ class MyUpdater(training.StandardUpdater):
         xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
         ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
         # print([x for sample in batch for x in sample[1]])
-        xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
+        xxs = [[self.xp.array(x, dtype=self.xp.int32)
+                for x in sample[1]] for sample in batch]
 
         optimizer.target.cleargrads()
         # TODO:後方互換が破壊された
         hx = chainer.Variable(
-            self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
+            self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
         cx = chainer.Variable(
-            self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
-        loss, accuracy, count = optimizer.target(xs, hx, cx, xxs, ts, train=True)
+            self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
+        loss, accuracy, count = optimizer.target(
+            xs, hx, cx, xxs, ts, train=True)
         loss.backward()
         optimizer.update()
 
 
-class MyEvaluator(extensions.Evaluator):
+class LSTMEvaluator(extensions.Evaluator):
 
     def __init__(self, iterator, target, device, unit):
-        super(MyEvaluator, self).__init__(
+        super(LSTMEvaluator, self).__init__(
             iterator=iterator, target=target, device=device)
         if device >= 0:
             self.xp = cuda.cupy
@@ -110,10 +139,43 @@ class MyEvaluator(extensions.Evaluator):
                 xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
                 ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
                 hx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
+                    self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
                 cx = chainer.Variable(
-                    self.xp.zeros((1, len(xs), self.unit+50), dtype=self.xp.float32))
-                xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in sample[1]] for sample in batch]
+                    self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
+
+                loss = target(xs, hx, cx, ts, train=False)
+
+            summary.add(observation)
+        return summary.compute_mean()
+
+
+class CharLSTMEvaluator(extensions.Evaluator):
+
+    def __init__(self, iterator, target, device, unit):
+        super(CharLSTMEvaluator, self).__init__(
+            iterator=iterator, target=target, device=device)
+        if device >= 0:
+            self.xp = cuda.cupy
+        else:
+            self.xp = xp
+        self.unit = unit
+
+    def evaluate(self):
+        iterator = self._iterators['main']
+        target = self._targets['main']
+        it = copy.copy(iterator)  # これがないと1回しかEvaluationが走らない
+        summary = reporter.DictSummary()
+        for batch in it:
+            observation = {}
+            with reporter.report_scope(observation):
+                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
+                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+                hx = chainer.Variable(
+                    self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
+                cx = chainer.Variable(
+                    self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
+                xxs = [[self.xp.array(x, dtype=self.xp.int32)
+                        for x in sample[1]] for sample in batch]
 
                 loss = target(xs, hx, cx, xxs, ts, train=False)
 
@@ -125,7 +187,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batchsize', '-b', type=int, default=20,
                         help='Number of examples in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=30,
+    parser.add_argument('--epoch', '-e', type=int, default=6,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', type=int, default=-1,
                         help='GPU ID (negative value indicates CPU)')
@@ -145,9 +207,8 @@ def main():
     parser.add_argument('--dropout', action='store_true',
                         help='use dropout?')
     parser.set_defaults(dropout=False)
-    parser.add_argument('--bilstm', action='store_true',
-                        help='use bi-lstm?')
-    parser.set_defaults(bilstm=False)
+    parser.add_argument('--model-type', dest='model_type', type=str, required=True,
+                        help='bilstm / lstm / char-bi-lstm')
     args = parser.parse_args()
 
     # save configurations to file
@@ -157,40 +218,10 @@ def main():
     with open(os.path.join(dest, "settings.json"), "w") as fo:
         fo.write(json.dumps(vars(args),  sort_keys=True, indent=4))
 
-    data_processor = DataProcessor(data_path="../work/", use_gpu=args.gpu, test=args.test)
+    # 学習/validation データの準備
+    data_processor = DataProcessor(
+        data_path="../work/", use_gpu=args.gpu, test=args.test)
     data_processor.prepare()
-
-    if args.bilstm:
-        model = Classifier(BiCharNERTagger(
-            n_vocab=len(data_processor.vocab),
-            n_char=len(data_processor.char),
-            embed_dim=args.unit,
-            hidden_dim=args.unit,
-            n_tag=len(data_processor.tag),
-            dropout=args.dropout
-        ))
-    else:
-        model = Classifier(NERTagger(
-            n_vocab=len(data_processor.vocab),
-            embed_dim=args.unit,
-            hidden_dim=args.unit,
-            n_tag=len(data_processor.tag),
-            dropout=args.dropout
-        ))
-
-    # load glove vector
-    if args.glove:
-        sys.stderr.write("loading glove...")
-        model.predictor.load_glove(args.glove, data_processor.vocab)
-        sys.stderr.write("done.\n")
-
-
-    optimizer = chainer.optimizers.Adam()
-    optimizer.setup(model)
-    if args.gpu >= 0:
-        chainer.cuda.get_device(args.gpu).use()  # make the GPU current
-        model.to_gpu()
-
     train = data_processor.train_data
     dev = data_processor.dev_data
 
@@ -199,13 +230,71 @@ def main():
     dev_iter = chainer.iterators.SerialIterator(
         dev, batch_size=args.batchsize, repeat=False)
 
-    updater = MyUpdater(train_iter, optimizer, device=args.gpu, unit=args.unit)
-    trainer = training.Trainer(updater, (args.epoch, 'epoch'), \
-                               out="../result/" + start_time)
+    # モデルの準備
+    optimizer = chainer.optimizers.Adam()
+    if args.model_type == "bilstm":
+        sys.stderr.write("Using Bidirectional LSTM\n")
+        model = Classifier(BiNERTagger(
+            n_vocab=len(data_processor.vocab),
+            embed_dim=args.unit,
+            hidden_dim=args.unit,
+            n_tag=len(data_processor.tag),
+            dropout=args.dropout
+        ))
+        optimizer.setup(model)
+        updater = LSTMUpdater(train_iter, optimizer,
+                            device=args.gpu, unit=args.unit)
+        trainer = training.Trainer(updater, (args.epoch, 'epoch'),
+                                   out="../result/" + start_time)
+        trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
+                                   device=args.gpu, unit=args.unit))
 
-    trainer.extend(MyEvaluator(dev_iter, optimizer.target,
-                               device=args.gpu, unit=args.unit))
-    # trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
+    elif args.model_type == "lstm":
+        sys.stderr.write("Using Normal LSTM\n")
+        model = Classifier(NERTagger(
+            n_vocab=len(data_processor.vocab),
+            embed_dim=args.unit,
+            hidden_dim=args.unit,
+            n_tag=len(data_processor.tag),
+            dropout=args.dropout
+        ))
+        optimizer.setup(model)
+        updater = LSTMUpdater(train_iter, optimizer,
+                            device=args.gpu, unit=args.unit)
+        trainer = training.Trainer(updater, (args.epoch, 'epoch'),
+                                   out="../result/" + start_time)
+        trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
+                                   device=args.gpu, unit=args.unit))
+
+    elif args.model_type == "charlstm":
+        sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
+        model = Classifier(BiCharNERTagger(
+            n_vocab=len(data_processor.vocab),
+            n_char=len(data_processor.char),
+            embed_dim=args.unit,
+            hidden_dim=args.unit,
+            n_tag=len(data_processor.tag),
+            dropout=args.dropout
+        ))
+        optimizer.setup(model)
+        updater = CharLSTMUpdater(train_iter, optimizer,
+                            device=args.gpu, unit=args.unit)
+        trainer = training.Trainer(updater, (args.epoch, 'epoch'),
+                                   out="../result/" + start_time)
+        trainer.extend(CharLSTMEvaluator(dev_iter, optimizer.target,
+                                    device=args.gpu, unit=args.unit))
+
+    # 必要とあらばGPUを使う
+    if args.gpu >= 0:
+        chainer.cuda.get_device(args.gpu).use()  # make the GPU current
+        model.to_gpu()
+
+    # load glove vector
+    if args.glove:
+        sys.stderr.write("loading glove...")
+        model.predictor.load_glove(args.glove, data_processor.vocab)
+        sys.stderr.write("done.\n")
+
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
 

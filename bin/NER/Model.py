@@ -122,7 +122,6 @@ class BiCharNERTagger(TaggerBase):
         xs = [self.embed(item) for item in xs]
         xs_forward = [F.concat([x, y, z], axis=1) for x, y, z in zip(
             xs, forward_encodings, backward_encodings)]
-        exit()
         xs_backward = [x[::-1] for x in xs_forward]
 
         if self.dropout and train:
