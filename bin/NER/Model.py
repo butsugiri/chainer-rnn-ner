@@ -4,6 +4,7 @@ import chainer
 import chainer.links as L
 import chainer.functions as F
 from chainer.links import NStepLSTM
+from chainer import reporter
 
 
 class TaggerBase(chainer.Chain):
@@ -30,19 +31,42 @@ class NERTagger(TaggerBase):
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim, n_tag),
+            crf=L.CRF1d(n_tag)
         )
         if dropout:
             self.dropout = True
         else:
             self.dropout = False
 
-    def __call__(self, xs, hx, cx, train=True):
+    def __call__(self, xs, hx, cx, ts, train=True):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+        loss = self.crf(ys, ts)
+
+        reporter.report({'loss': loss}, self)
+        count = 0
+        accuracy = None
+        for yi, ti in zip(ys, ts):
+            if accuracy is not None:
+                accuracy += F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+            else:
+                accuracy = F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+        reporter.report({'accuracy': accuracy / count}, self)
+        return loss, accuracy, count
+
+    def encode_sequence(self, xs, hx, cx, ts, train):
+        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
+        xs = [xs[i] for i in inds]
+        ts = [ts[i] for i in inds]
         xs = [self.embed(item) for item in xs]
         if self.dropout and train:
             xs = [F.dropout(item) for item in xs]
         hy, cy, ys = self.l1(hx, cx, xs, train=train)  # don't use dropout
-        y = [self.l2(item) for item in ys]
-        return y
+        ys = [self.l2(item) for item in ys]
+        ys = F.transpose_sequence(ys)
+        ts = F.transpose_sequence(ts)
+        return ys, ts
 
 
 class BiNERTagger(TaggerBase):
@@ -56,26 +80,49 @@ class BiNERTagger(TaggerBase):
             backward_l1=L.NStepLSTM(
                 1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim * 2, n_tag),
+            crf=L.CRF1d(n_tag)
         )
         if dropout:
             self.dropout = True
         else:
             self.dropout = False
 
-    def __call__(self, xs, hx, cx, train=True):
+    def __call__(self, xs, hx, cx, ts, train=True):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+        loss = self.crf(ys, ts)
+
+        reporter.report({'loss': loss}, self)
+        count = 0
+        accuracy = None
+        for yi, ti in zip(ys, ts):
+            if accuracy is not None:
+                accuracy += F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+            else:
+                accuracy = F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+        reporter.report({'accuracy': accuracy / count}, self)
+        return loss, accuracy, count
+
+    def encode_sequence(self, xs, hx, cx, ts, train):
+        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
+        xs = [xs[i] for i in inds]
+        ts = [ts[i] for i in inds]
         xs = [self.embed(item) for item in xs]
         xs_backward = [item[::-1] for item in xs]
-
         if self.dropout and train:
             xs = [F.dropout(item) for item in xs]
+            xs_backward = [F.dropout(item) for item in xs_backward]
         forward_hy, forward_cy, forward_ys = self.forward_l1(
-            hx, cx, xs, train=train)  # don't use dropout
+            hx, cx, xs, train=train)
         backward_hy, backward_cy, backward_ys = self.backward_l1(
-            hx, cx, xs_backward, train=train)  # don't use dropout
+            hx, cx, xs_backward, train=train)
         ys = [F.concat([forward, backward[::-1]], axis=1)
               for forward, backward in zip(forward_ys, backward_ys)]
-        y = [self.l2(item) for item in ys]
-        return y
+        ys = [self.l2(item) for item in ys]
+        ys = F.transpose_sequence(ys)
+        ts = F.transpose_sequence(ts)
+        return ys, ts
 
 
 class BiCharNERTagger(TaggerBase):
@@ -93,13 +140,35 @@ class BiCharNERTagger(TaggerBase):
             l2=L.Linear((embed_dim + 50) * 2, n_tag),
             forward_char=L.NStepLSTM(1, 25, 25, dropout=0, use_cudnn=True),
             backward_char=L.NStepLSTM(1, 25, 25, dropout=0, use_cudnn=True),
+            crf=L.CRF1d(n_tag)
         )
         if dropout:
             self.dropout = True
         else:
             self.dropout = False
 
-    def __call__(self, xs, hx, cx, xxs, train=True):
+    def __call__(self, xs, hx, cx, xxs, ts, train=True):
+        ys, ts = self.encode_sequence(xs, hx, cx, xxs, ts, train)
+        loss = self.crf(ys, ts)
+
+        reporter.report({'loss': loss}, self)
+        count = 0
+        accuracy = None
+        for yi, ti in zip(ys, ts):
+            if accuracy is not None:
+                accuracy += F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+            else:
+                accuracy = F.accuracy(yi, ti) * len(ti)
+                count += len(ti)
+        reporter.report({'accuracy': accuracy / count}, self)
+        return loss, accuracy, count
+
+    def encode_sequence(self, xs, hx, cx, xxs, ts, train):
+        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
+        xs = [xs[i] for i in inds]
+        ts = [ts[i] for i in inds]
+        xxs = [xxs[i] for i in inds]
         forward_char_embeds = [
             [self.char_embed(item) for item in items] for items in xxs]
         backward_char_embeds = [[item[::-1] for item in items]
@@ -133,5 +202,8 @@ class BiCharNERTagger(TaggerBase):
             hx, cx, xs_backward, train=train)  # don't use dropout
         ys = [F.concat([forward, backward[::-1]], axis=1)
               for forward, backward in zip(forward_ys, backward_ys)]
-        y = [self.l2(item) for item in ys]
-        return y
+        ys = [self.l2(item) for item in ys]
+
+        ys = F.transpose_sequence(ys)
+        ts = F.transpose_sequence(ts)
+        return ys, ts

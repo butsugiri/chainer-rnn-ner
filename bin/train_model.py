@@ -106,7 +106,6 @@ class CharLSTMUpdater(training.StandardUpdater):
                 for x in sample[1]] for sample in batch]
 
         optimizer.target.cleargrads()
-        # TODO:後方互換が破壊された
         hx = chainer.Variable(
             self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
         cx = chainer.Variable(
@@ -185,7 +184,7 @@ class CharLSTMEvaluator(extensions.Evaluator):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batchsize', '-b', type=int, default=20,
+    parser.add_argument('--batchsize', '-b', type=int, default=5,
                         help='Number of examples in each mini-batch')
     parser.add_argument('--epoch', '-e', type=int, default=6,
                         help='Number of sweeps over the dataset to train')
@@ -234,13 +233,13 @@ def main():
     optimizer = chainer.optimizers.Adam()
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
-        model = Classifier(BiNERTagger(
+        model = BiNERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -251,13 +250,13 @@ def main():
 
     elif args.model_type == "lstm":
         sys.stderr.write("Using Normal LSTM\n")
-        model = Classifier(NERTagger(
+        model = NERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -268,14 +267,14 @@ def main():
 
     elif args.model_type == "charlstm":
         sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
-        model = Classifier(BiCharNERTagger(
+        model = BiCharNERTagger(
             n_vocab=len(data_processor.vocab),
             n_char=len(data_processor.char),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = CharLSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -292,7 +291,7 @@ def main():
     # load glove vector
     if args.glove:
         sys.stderr.write("loading glove...")
-        model.predictor.load_glove(args.glove, data_processor.vocab)
+        model.load_glove(args.glove, data_processor.vocab)
         sys.stderr.write("done.\n")
 
     trainer.extend(extensions.snapshot_object(
