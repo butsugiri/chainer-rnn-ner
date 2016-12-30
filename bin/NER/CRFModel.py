@@ -162,7 +162,7 @@ class CRFBiCharNERTagger(CRFTaggerBase):
         reporter.report({'accuracy': accuracy}, self)
         return loss, accuracy, count
 
-    def predict(self, xs, hx, cx, ts, train=False):
+    def predict(self, xs, hx, cx, xxs, ts, train=False):
         ys, ts = self.encode_sequence(xs, hx, cx, xxs, ts, train)
         _, predicts = self.crf.argmax(ys)
         return predicts, ts
