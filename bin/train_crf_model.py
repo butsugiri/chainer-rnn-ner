@@ -170,6 +170,7 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--model-type', dest='model_type', type=str, required=True,
                         help='bilstm / lstm / char-bi-lstm')
+    parser.add_argument('--final-layer', default='withCRF', type=str)
     args = parser.parse_args()
 
     # save configurations to file
@@ -177,7 +178,7 @@ def main():
     dest = "../result/" + start_time
     os.makedirs(dest)
     with open(os.path.join(dest, "settings.json"), "w") as fo:
-        fo.write(json.dumps(vars(args),  sort_keys=True, indent=4))
+        fo.write(json.dumps(vars(args), sort_keys=True, indent=4))
 
     # 学習/validation データの準備
     data_processor = DataProcessor(

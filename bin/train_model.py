@@ -209,6 +209,7 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--model-type', dest='model_type', type=str, required=True,
                         help='bilstm / lstm / char-bi-lstm')
+    parser.add_argument('--final-layer', default='withoutCRF', type=str)
     args = parser.parse_args()
 
     # save configurations to file

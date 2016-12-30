@@ -11,30 +11,34 @@ import chainer.functions as F
 from chainer import training
 from chainer import serializers
 from train_model import Classifier
-from NER import NERTagger, BiNERTagger, BiCharNERTagger
+from NER import CRFNERTagger, CRFBiNERTagger, CRFBiCharNERTagger
 from NER import DataProcessor
 
 def predict(iter, model_type, model, unit):
     if model_type == "lstm" or model_type == "bilstm":
         for batch in iter:
-            xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
-            ts = [xp.array(x[2], dtype=xp.int32) for x in batch]
+            inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+            xs = [xp.array(batch[i][0], dtype=xp.int32) for i in inds]
+            ts = [xp.array(batch[i][2], dtype=xp.int32) for i in inds]
+
             hx = chainer.Variable(
                 xp.zeros((1, len(xs), unit), dtype=xp.float32))
             cx = chainer.Variable(
                 xp.zeros((1, len(xs), unit), dtype=xp.float32))
-            ys = model.predictor(xs, hx, cx, train=False)
+            ys, ts = model.predict(xs, hx, cx, ts, train=False)
             yield ys, ts
     else:
         for batch in iter:
-            xs = [xp.array(x[0], dtype=xp.int32) for x in batch]
-            ts = [xp.array(x[2], dtype=xp.int32) for x in batch]
-            xxs = [[xp.array(x, dtype=xp.int32) for x in sample[1]] for sample in batch]
+            inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+            xs = [xp.array(batch[i][0], dtype=xp.int32) for i in inds]
+            ts = [xp.array(batch[i][2], dtype=xp.int32) for i in inds]
+            xxs = [[xp.array(x, dtype=xp.int32) for x in batch[i][1]] for i in inds]
+
             hx = chainer.Variable(
                 xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
             cx = chainer.Variable(
                 xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
-            ys = model.predictor(xs, hx, cx, xxs, train=False)
+            ys, ts = model.predict(xs, hx, cx, ts, train=False)
             yield ys, ts
 
 
@@ -61,34 +65,34 @@ def main():
         test = data.test_data
 
     if args.model_type == "lstm":
-        model = Classifier(NERTagger(
+        model = CRFNERTagger(
             n_vocab=len(data.vocab),
             embed_dim=100,
             hidden_dim=args.unit,
             n_tag=len(data.tag),
             dropout=None
-        ))
+        )
     elif args.model_type == 'bilstm':
-        model = Classifier(BiNERTagger(
+        model = CRFBiNERTagger(
             n_vocab=len(data.vocab),
             embed_dim=100,
             hidden_dim=args.unit,
             n_tag=len(data.tag),
             dropout=None
-        ))
+        )
     elif args.model_type == 'charlstm':
-        model = Classifier(BiCharNERTagger(
+        model = CRFBiCharNERTagger(
             n_vocab=len(data.vocab),
             n_char=len(data.char),
             embed_dim=100,
             hidden_dim=args.unit,
             n_tag=len(data.tag),
             dropout=None
-        ))
+        )
 
     # load glove vector
     if args.glove:
-        sys.stderr.write("loading glove…")
+        sys.stderr.write("loading glove...")
         model.predictor.load_glove(args.glove, data.vocab)
         sys.stderr.write("done.\n")
 
@@ -103,13 +107,12 @@ def main():
     id2vocab = data.id2vocab
 
     for ys, ts in predict(test_iter, args.model_type, model, args.unit):
-        for y, t in zip(ys, ts):
-            pred_ids = F.argmax(F.softmax(y), axis=1).data
-            pred_labels = [id2tag[x] for x in pred_ids]
-
-            target_labels = [id2tag[x] for x in t]
-
-            for p, t in zip(pred_labels, target_labels):
+        # minibatch-unit-loop
+        ys = [[id2tag[i] for i in y.data] for y in F.transpose_sequence(ys)]
+        ts = [[id2tag[i] for i in t.data] for t in F.transpose_sequence(ts)]
+        # instance-loop
+        for predict_seq, target_seq in zip(ys, ts):
+            for p, t in zip(predict_seq, target_seq):
                 print("{}\t{}".format(p, t))
             print()
 

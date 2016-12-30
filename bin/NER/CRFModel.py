@@ -41,19 +41,22 @@ class CRFNERTagger(CRFTaggerBase):
     def __call__(self, xs, hx, cx, ts, train=True):
         ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
         loss = self.crf(ys, ts)
-
         reporter.report({'loss': loss}, self)
+
+        _, predicts = self.crf.argmax(ys)
         count = 0
-        accuracy = None
-        for yi, ti in zip(ys, ts):
-            if accuracy is not None:
-                accuracy += F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-            else:
-                accuracy = F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-        reporter.report({'accuracy': accuracy / count}, self)
+        correct = 0
+        for t, predict in zip(ts, predicts):
+            correct += self.xp.sum(t.data == predict)
+            count += len(t.data)
+        accuracy = correct * 1.0 / count
+        reporter.report({'accuracy': accuracy}, self)
         return loss, accuracy, count
+
+    def predict(self, xs, hx, cx, ts, train=False):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+        _, predicts = self.crf.argmax(ys)
+        return predicts, ts
 
     def encode_sequence(self, xs, hx, cx, ts, train):
         xs = [self.embed(item) for item in xs]
@@ -87,19 +90,22 @@ class CRFBiNERTagger(CRFTaggerBase):
     def __call__(self, xs, hx, cx, ts, train=True):
         ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
         loss = self.crf(ys, ts)
-
         reporter.report({'loss': loss}, self)
+
+        _, predicts = self.crf.argmax(ys)
         count = 0
-        accuracy = None
-        for yi, ti in zip(ys, ts):
-            if accuracy is not None:
-                accuracy += F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-            else:
-                accuracy = F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-        reporter.report({'accuracy': accuracy / count}, self)
+        correct = 0
+        for t, predict in zip(ts, predicts):
+            correct += self.xp.sum(t.data == predict)
+            count += len(t.data)
+        accuracy = correct * 1.0 / count
+        reporter.report({'accuracy': accuracy}, self)
         return loss, accuracy, count
+
+    def predict(self, xs, hx, cx, ts, train=False):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+        _, predicts = self.crf.argmax(ys)
+        return predicts, ts
 
     def encode_sequence(self, xs, hx, cx, ts, train):
         xs = [self.embed(item) for item in xs]
@@ -141,22 +147,25 @@ class CRFBiCharNERTagger(CRFTaggerBase):
         else:
             self.dropout = False
 
-    def __call__(self, xs, hx, cx, xxs, ts, train=True):
-        ys, ts = self.encode_sequence(xs, hx, cx, xxs, ts, train)
+    def __call__(self, xs, hx, cx, ts, train=True):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
         loss = self.crf(ys, ts)
-
         reporter.report({'loss': loss}, self)
+
+        _, predicts = self.crf.argmax(ys)
         count = 0
-        accuracy = None
-        for yi, ti in zip(ys, ts):
-            if accuracy is not None:
-                accuracy += F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-            else:
-                accuracy = F.accuracy(yi, ti) * len(ti)
-                count += len(ti)
-        reporter.report({'accuracy': accuracy / count}, self)
+        correct = 0
+        for t, predict in zip(ts, predicts):
+            correct += self.xp.sum(t.data == predict)
+            count += len(t.data)
+        accuracy = correct * 1.0 / count
+        reporter.report({'accuracy': accuracy}, self)
         return loss, accuracy, count
+
+    def predict(self, xs, hx, cx, ts, train=False):
+        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+        _, predicts = self.crf.argmax(ys)
+        return predicts, ts
 
     def encode_sequence(self, xs, hx, cx, xxs, ts, train):
         forward_char_embeds = [
