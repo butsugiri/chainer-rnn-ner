@@ -257,7 +257,7 @@ def main():
         sys.stderr.write("done.\n")
 
     trainer.extend(extensions.snapshot_object(
-        model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
+        model, 'model_iter_{.updater.iteration}', trigger=chainer.training.triggers.MaxValueTrigger('validation/main/accuracy')))
 
     trainer.extend(extensions.ProgressBar(update_interval=10))
     trainer.extend(extensions.LogReport())
