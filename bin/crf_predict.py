@@ -101,7 +101,7 @@ def main():
 
     serializers.load_npz(args.model, model)
 
-    test_iter = chainer.iterators.SerialIterator(test, repeat=False, batch_size=10)
+    test_iter = chainer.iterators.SerialIterator(test, repeat=False, shuffle=False, batch_size=10)
 
     id2tag = data.id2tag
     id2vocab = data.id2vocab
