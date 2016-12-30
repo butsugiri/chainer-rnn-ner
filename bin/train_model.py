@@ -19,46 +19,6 @@ from NER import DataProcessor
 import numpy as xp
 
 
-class Classifier(chainer.Chain):
-    compute_accuracy = True
-
-    def __init__(self, predictor, lossfun=F.softmax_cross_entropy,
-                 accfun=F.accuracy):
-        super(Classifier, self).__init__(predictor=predictor)
-        self.lossfun = lossfun
-        self.accfun = accfun
-        self.y = None
-        self.loss = None
-        self.accuracy = None
-
-    def __call__(self, *args, train=True):
-        assert len(args) >= 2
-        x = args[:-1]
-        t = args[-1]
-        self.y = None
-        self.loss = None
-        self.accuracy = None
-        self.y = self.predictor(*x, train)
-        for yi, ti, in zip(self.y, t):
-            if self.loss is not None:
-                self.loss += self.lossfun(yi, ti)
-            else:
-                self.loss = self.lossfun(yi, ti)
-        reporter.report({'loss': self.loss}, self)
-
-        count = 0
-        if self.compute_accuracy:
-            for yi, ti in zip(self.y, t):
-                if self.accuracy is not None:
-                    self.accuracy += self.accfun(yi, ti) * len(ti)
-                    count += len(ti)
-                else:
-                    self.accuracy = self.accfun(yi, ti) * len(ti)
-                    count += len(ti)
-            reporter.report({'accuracy': self.accuracy / count}, self)
-        return self.loss, self.accuracy, count
-
-
 class LSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
@@ -72,8 +32,9 @@ class LSTMUpdater(training.StandardUpdater):
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
-        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+        inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+        ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
@@ -99,11 +60,10 @@ class CharLSTMUpdater(training.StandardUpdater):
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
-        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
-        # print([x for sample in batch for x in sample[1]])
-        xxs = [[self.xp.array(x, dtype=self.xp.int32)
-                for x in sample[1]] for sample in batch]
+        inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+        ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
+        xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
@@ -135,8 +95,9 @@ class LSTMEvaluator(extensions.Evaluator):
         for batch in it:
             observation = {}
             with reporter.report_scope(observation):
-                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+                inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
                 cx = chainer.Variable(
@@ -167,14 +128,15 @@ class CharLSTMEvaluator(extensions.Evaluator):
         for batch in it:
             observation = {}
             with reporter.report_scope(observation):
-                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+                inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
+                xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
+
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
                 cx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
-                xxs = [[self.xp.array(x, dtype=self.xp.int32)
-                        for x in sample[1]] for sample in batch]
 
                 loss = target(xs, hx, cx, xxs, ts, train=False)
 

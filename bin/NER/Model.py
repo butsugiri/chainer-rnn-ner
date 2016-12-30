@@ -56,9 +56,6 @@ class NERTagger(TaggerBase):
         return loss, accuracy, count
 
     def encode_sequence(self, xs, hx, cx, ts, train):
-        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
-        xs = [xs[i] for i in inds]
-        ts = [ts[i] for i in inds]
         xs = [self.embed(item) for item in xs]
         if self.dropout and train:
             xs = [F.dropout(item) for item in xs]
@@ -165,10 +162,10 @@ class BiCharNERTagger(TaggerBase):
         return loss, accuracy, count
 
     def encode_sequence(self, xs, hx, cx, xxs, ts, train):
-        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
-        xs = [xs[i] for i in inds]
-        ts = [ts[i] for i in inds]
-        xxs = [xxs[i] for i in inds]
+        # inds = np.argsort([-len(x.data) for x in xs]).astype('i')
+        # xs = [xs[i] for i in inds]
+        # ts = [ts[i] for i in inds]
+        # xxs = [xxs[i] for i in inds]
         forward_char_embeds = [
             [self.char_embed(item) for item in items] for items in xxs]
         backward_char_embeds = [[item[::-1] for item in items]
