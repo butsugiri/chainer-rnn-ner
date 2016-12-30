@@ -1,6 +1,6 @@
-**Note:** This repository is part of the assignment given in Tohoku University [Information Communication Theory (情報伝達学)](http://www.cl.ecei.tohoku.ac.jp/index.php?InformationCommunicationTheory) lecture.
+**Note:** This repository is part of the assignment given in Tohoku University - [Information Communication Theory (情報伝達学)](http://www.cl.ecei.tohoku.ac.jp/index.php?InformationCommunicationTheory) lecture.
 
-Students were actually expected to do the feature engineering with [CRFsuite](http://www.chokkan.org/software/crfsuite/) but I personally preferred implementing RNN.
+Students were actually expected to do some feature engineering with [CRFsuite](http://www.chokkan.org/software/crfsuite/) but I personally preferred to implement RNN.
 
 # About
 
@@ -13,6 +13,10 @@ Pages 172-175
 
 Note that this repo is not re-implementation of these models.
 
+The purpose of implementing models is to see how the performance improves when I change the model architecture from simple models to more complicated models, which are reported to perform well (e.g. LSTM --> Bidirectional LSTM --> Bidirectional LSTM with Character-Encoding)
+
+I suppose that this model can be applied to other tasks, but I have not yet tried.
+
 # Model Details
 Following models are implemented by Chainer.
 
@@ -22,6 +26,7 @@ Following models are implemented by Chainer.
 * Bi-directional LSTM with Character-based encoding (Model.py/BiCharNERTagger)
 
 ## Models with CRF Layer as Loss Function
+This loss function is much better than simple cross entropy as it (latently) considers the restriction given to BIO tags.
 * LSTM (CRFModel.py/CRFNERTagger)
 * Bi-directional LSTM (CRFModel.py/CRFBiNERTagger)
 * Bi-directional LSTM with Character-based encoding (CRFModel.py/CRFBiCharNERTagger)
@@ -35,7 +40,7 @@ Following models are implemented by Chainer.
 ## Resources
 
 * Pretrained Word Vector (e.g. [GloVe](http://nlp.stanford.edu/projects/glove/))
-    * The script will still work without these vectors, but the performance will significantly deteriorate.
+    * The script will still work without this, but the performance will significantly deteriorate. (Read papers for details)
 * [CoNLL 2003 Dataset](http://www.cnts.ua.ac.be/conll2003/ner/)
 
 # Usage
@@ -70,7 +75,7 @@ Both scripts have exact same options:
     --glove GLOVE         path to glove vector
     --dropout             use dropout?
     --model-type MODEL_TYPE
-                          bilstm / lstm / char-bi-lstm
+                          bilstm / lstm / charlstm
     --final-layer FINAL_LAYER
                           loss function
 ```
@@ -88,10 +93,10 @@ optional arguments:
   --model-type MODEL_TYPE
                         bilstm / lstm / charlstm
   --model MODEL         path to model file
-  --dev
+  --dev                 If true, use validation data
 ```
 Do not forget to specify `--model-type` and `model`.
-You need to give the path to trained model file.
+(You need to give the path to trained model file)
 
 The performance (Accuracy/Precision/F-Score) can be tested by `conlleval.pl` (not included in this repo.)
 
