@@ -19,46 +19,6 @@ from NER import DataProcessor
 import numpy as xp
 
 
-class Classifier(chainer.Chain):
-    compute_accuracy = True
-
-    def __init__(self, predictor, lossfun=F.softmax_cross_entropy,
-                 accfun=F.accuracy):
-        super(Classifier, self).__init__(predictor=predictor)
-        self.lossfun = lossfun
-        self.accfun = accfun
-        self.y = None
-        self.loss = None
-        self.accuracy = None
-
-    def __call__(self, *args, train=True):
-        assert len(args) >= 2
-        x = args[:-1]
-        t = args[-1]
-        self.y = None
-        self.loss = None
-        self.accuracy = None
-        self.y = self.predictor(*x, train)
-        for yi, ti, in zip(self.y, t):
-            if self.loss is not None:
-                self.loss += self.lossfun(yi, ti)
-            else:
-                self.loss = self.lossfun(yi, ti)
-        reporter.report({'loss': self.loss}, self)
-
-        count = 0
-        if self.compute_accuracy:
-            for yi, ti in zip(self.y, t):
-                if self.accuracy is not None:
-                    self.accuracy += self.accfun(yi, ti) * len(ti)
-                    count += len(ti)
-                else:
-                    self.accuracy = self.accfun(yi, ti) * len(ti)
-                    count += len(ti)
-            reporter.report({'accuracy': self.accuracy / count}, self)
-        return self.loss, self.accuracy, count
-
-
 class LSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
@@ -72,8 +32,9 @@ class LSTMUpdater(training.StandardUpdater):
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
-        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+        inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+        ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
@@ -99,14 +60,12 @@ class CharLSTMUpdater(training.StandardUpdater):
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
-        xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-        ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
-        # print([x for sample in batch for x in sample[1]])
-        xxs = [[self.xp.array(x, dtype=self.xp.int32)
-                for x in sample[1]] for sample in batch]
+        inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+        ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
+        xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
 
         optimizer.target.cleargrads()
-        # TODO:後方互換が破壊された
         hx = chainer.Variable(
             self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
         cx = chainer.Variable(
@@ -136,8 +95,9 @@ class LSTMEvaluator(extensions.Evaluator):
         for batch in it:
             observation = {}
             with reporter.report_scope(observation):
-                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+                inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
                 cx = chainer.Variable(
@@ -168,14 +128,15 @@ class CharLSTMEvaluator(extensions.Evaluator):
         for batch in it:
             observation = {}
             with reporter.report_scope(observation):
-                xs = [self.xp.array(x[0], dtype=self.xp.int32) for x in batch]
-                ts = [self.xp.array(x[2], dtype=self.xp.int32) for x in batch]
+                inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
+                xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
+
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
                 cx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
-                xxs = [[self.xp.array(x, dtype=self.xp.int32)
-                        for x in sample[1]] for sample in batch]
 
                 loss = target(xs, hx, cx, xxs, ts, train=False)
 
@@ -185,7 +146,7 @@ class CharLSTMEvaluator(extensions.Evaluator):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batchsize', '-b', type=int, default=20,
+    parser.add_argument('--batchsize', '-b', type=int, default=5,
                         help='Number of examples in each mini-batch')
     parser.add_argument('--epoch', '-e', type=int, default=6,
                         help='Number of sweeps over the dataset to train')
@@ -234,13 +195,13 @@ def main():
     optimizer = chainer.optimizers.Adam()
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
-        model = Classifier(BiNERTagger(
+        model = BiNERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -251,13 +212,13 @@ def main():
 
     elif args.model_type == "lstm":
         sys.stderr.write("Using Normal LSTM\n")
-        model = Classifier(NERTagger(
+        model = NERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -268,14 +229,14 @@ def main():
 
     elif args.model_type == "charlstm":
         sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
-        model = Classifier(BiCharNERTagger(
+        model = BiCharNERTagger(
             n_vocab=len(data_processor.vocab),
             n_char=len(data_processor.char),
             embed_dim=args.unit,
             hidden_dim=args.unit,
             n_tag=len(data_processor.tag),
             dropout=args.dropout
-        ))
+        )
         optimizer.setup(model)
         updater = CharLSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
@@ -292,11 +253,11 @@ def main():
     # load glove vector
     if args.glove:
         sys.stderr.write("loading glove...")
-        model.predictor.load_glove(args.glove, data_processor.vocab)
+        model.load_glove(args.glove, data_processor.vocab)
         sys.stderr.write("done.\n")
 
     trainer.extend(extensions.snapshot_object(
-        model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
+        model, 'model_iter_{.updater.iteration}', trigger=chainer.training.triggers.MaxValueTrigger('validation/main/accuracy')))
 
     trainer.extend(extensions.ProgressBar(update_interval=10))
     trainer.extend(extensions.LogReport())
