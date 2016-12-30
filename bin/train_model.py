@@ -231,7 +231,7 @@ def main():
 
     # モデルの準備
     optimizer = chainer.optimizers.Adam()
-    optimizer.add(chainer.optimizer.GradientClipping(5))
+    optimizer.add_hook(chainer.optimizer.GradientClipping(5))
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
         model = Classifier(BiNERTagger(
