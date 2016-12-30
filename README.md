@@ -15,7 +15,7 @@ Note that this repo is not re-implementation of these models.
 
 The purpose of implementing models is to see how the performance improves when I change the model architecture from simple models to more complicated models, which are reported to perform well (e.g. LSTM --> Bidirectional LSTM --> Bidirectional LSTM with Character-Encoding)
 
-I suppose that this model can be applied to other tasks, but I have not yet tried.
+I suppose that this model can be applied to other (sequential labeling) tasks, but I have not yet tried.
 
 # Model Details
 Following models are implemented by Chainer.
@@ -40,7 +40,7 @@ This loss function is much better than simple cross entropy as it (latently) con
 ## Resources
 
 * Pretrained Word Vector (e.g. [GloVe](http://nlp.stanford.edu/projects/glove/))
-    * The script will still work without this, but the performance will significantly deteriorate. (Read papers for details)
+    * The script will still work (and learn) without this, but the performance will significantly deteriorate. (Read papers for details)
 * [CoNLL 2003 Dataset](http://www.cnts.ua.ac.be/conll2003/ner/)
 
 # Usage
@@ -100,5 +100,25 @@ Do not forget to specify `--model-type` and `model`.
 
 The performance (Accuracy/Precision/F-Score) can be tested by `conlleval.pl` (not included in this repo.)
 
-# Result
-TBA
+# Results
+| Model        | CRF? | Precision | Recall | F-Score |
+|--------------|------|-----------|--------|---------|
+| LSTM         | No   | 70.87     | 65.38  | 68.01   |
+| Bi-LSTM      | No   | 76.41     | 74.39  | 75.39   |
+| Bi-Char-LSTM | No   | 84.93     | 81.65  | 83.26   |
+| LSTM         | Yes  | 75.49     | 77.17  | 76.32   |
+| Bi-LSTM      | Yes  | 79.71     | 81.49  | 80.59   |
+| Bi-Char-LSTM | Yes  | 84.17     | 83.80  | 83.98   |
+
+## Learning Curves
+epoch vs. training data loss
+![epoch vs. training data loss](./images/training_data_loss.png)
+
+Epoch vs. Validation Data Loss
+![epoch vs. validation data loss](./images/validation_data_loss.png)
+
+Epoch vs. Training Data Accuracy
+![epoch vs. training data accuracy](./images/training_data_acuracy.png)
+
+Epoch vs. Validation Data Accuracy
+![epoch vs. validation data accuracy](./images/validation_data_acuracy.png)
