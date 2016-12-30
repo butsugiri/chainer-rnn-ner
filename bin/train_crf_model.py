@@ -22,7 +22,8 @@ import numpy as xp
 class LSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
-        super(LSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        super(LSTMUpdater, self).__init__(
+            iterator=iterator, optimizer=optimizer)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -50,7 +51,8 @@ class LSTMUpdater(training.StandardUpdater):
 class CharLSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
-        super(CharLSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        super(CharLSTMUpdater, self).__init__(
+            iterator=iterator, optimizer=optimizer)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -63,7 +65,8 @@ class CharLSTMUpdater(training.StandardUpdater):
         inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
         xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
         ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
-        xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
+        xxs = [[self.xp.array(x, dtype=self.xp.int32)
+                for x in batch[i][1]] for i in inds]
 
         optimizer.target.cleargrads()
         hx = chainer.Variable(
@@ -96,8 +99,10 @@ class LSTMEvaluator(extensions.Evaluator):
             observation = {}
             with reporter.report_scope(observation):
                 inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
-                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
-                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32)
+                      for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32)
+                      for i in inds]
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit), dtype=self.xp.float32))
                 cx = chainer.Variable(
@@ -129,9 +134,12 @@ class CharLSTMEvaluator(extensions.Evaluator):
             observation = {}
             with reporter.report_scope(observation):
                 inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
-                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
-                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
-                xxs = [[self.xp.array(x, dtype=self.xp.int32) for x in batch[i][1]] for i in inds]
+                xs = [self.xp.array(batch[i][0], dtype=self.xp.int32)
+                      for i in inds]
+                ts = [self.xp.array(batch[i][2], dtype=self.xp.int32)
+                      for i in inds]
+                xxs = [[self.xp.array(x, dtype=self.xp.int32)
+                        for x in batch[i][1]] for i in inds]
 
                 hx = chainer.Variable(
                     self.xp.zeros((1, len(xs), self.unit + 50), dtype=self.xp.float32))
@@ -168,7 +176,7 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--model-type', dest='model_type', type=str, required=True,
                         help='bilstm / lstm / char-bi-lstm')
-    parser.add_argument('--final-layer', default='withCRF', type=str)
+    parser.add_argument('--final-layer', default='withCRF', type=str, help='CRF as the loss function')
     args = parser.parse_args()
 
     # save configurations to file
@@ -204,11 +212,11 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
-                                   device=args.gpu, unit=args.unit))
+                                     device=args.gpu, unit=args.unit))
 
     elif args.model_type == "lstm":
         sys.stderr.write("Using Normal LSTM\n")
@@ -222,11 +230,11 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
-                                   device=args.gpu, unit=args.unit))
+                                     device=args.gpu, unit=args.unit))
 
     elif args.model_type == "charlstm":
         sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
@@ -241,11 +249,11 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = CharLSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                                  device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(CharLSTMEvaluator(dev_iter, optimizer.target,
-                                    device=args.gpu, unit=args.unit))
+                                         device=args.gpu, unit=args.unit))
 
     # 必要とあらばGPUを使う
     if args.gpu >= 0:

@@ -5,6 +5,9 @@ import chainer.links as L
 import chainer.functions as F
 from chainer.links import NStepLSTM
 from chainer import reporter
+"""
+Model with CRF as the loss function
+"""
 
 
 class CRFTaggerBase(chainer.Chain):
@@ -12,7 +15,7 @@ class CRFTaggerBase(chainer.Chain):
     def __init__(self):
         pass
 
-    # このメソッドは単方向・双方向LSTMで使いたい
+    # I want to use this for NERTagger, BiNERTagger, BiCharNERTagger
     def load_glove(self, path, vocab):
         with open(path, "r") as fi:
             for line in fi:
@@ -24,7 +27,9 @@ class CRFTaggerBase(chainer.Chain):
 
 
 class CRFNERTagger(CRFTaggerBase):
-    """single LSTM"""
+    """
+    Ordinary LSTM
+    """
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
         super(CRFTaggerBase, self).__init__(
@@ -70,7 +75,9 @@ class CRFNERTagger(CRFTaggerBase):
 
 
 class CRFBiNERTagger(CRFTaggerBase):
-    """bi-directional LSTM"""
+    """
+    Bi-directional LSTM
+    """
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
         super(CRFTaggerBase, self).__init__(
@@ -126,7 +133,9 @@ class CRFBiNERTagger(CRFTaggerBase):
 
 
 class CRFBiCharNERTagger(CRFTaggerBase):
-    """bi-directional LSTM with char-based encoding"""
+    """
+    Bi-directional LSTM with character-based encoding
+    """
 
     def __init__(self, n_vocab, n_char, n_tag, embed_dim, hidden_dim, dropout):
         super(CRFTaggerBase, self).__init__(
@@ -196,9 +205,9 @@ class CRFBiCharNERTagger(CRFTaggerBase):
             xs_forward = [F.dropout(item) for item in xs_forward]
             xs_backward = [F.dropout(item) for item in xs_backward]
         forward_hy, forward_cy, forward_ys = self.forward_l1(
-            hx, cx, xs_forward, train=train)  # don't use dropout
+            hx, cx, xs_forward, train=train)
         backward_hy, backward_cy, backward_ys = self.backward_l1(
-            hx, cx, xs_backward, train=train)  # don't use dropout
+            hx, cx, xs_backward, train=train)
         ys = [F.concat([forward, backward[::-1]], axis=1)
               for forward, backward in zip(forward_ys, backward_ys)]
         ys = [self.l2(item) for item in ys]

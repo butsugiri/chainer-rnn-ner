@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Training script for the model with cross entropy as the loss function.
+"""
 import sys
 import os
 import json
@@ -62,7 +65,8 @@ class Classifier(chainer.Chain):
 class LSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
-        super(LSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        super(LSTMUpdater, self).__init__(
+            iterator=iterator, optimizer=optimizer)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -89,7 +93,8 @@ class LSTMUpdater(training.StandardUpdater):
 class CharLSTMUpdater(training.StandardUpdater):
 
     def __init__(self, iterator, optimizer, device, unit):
-        super(CharLSTMUpdater, self).__init__(iterator=iterator, optimizer=optimizer)
+        super(CharLSTMUpdater, self).__init__(
+            iterator=iterator, optimizer=optimizer)
         if device >= 0:
             self.xp = cuda.cupy
         else:
@@ -207,7 +212,8 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--model-type', dest='model_type', type=str, required=True,
                         help='bilstm / lstm / char-bi-lstm')
-    parser.add_argument('--final-layer', default='withoutCRF', type=str)
+    parser.add_argument('--final-layer', default='withoutCRF',
+                        type=str, help='loss function is the cross entropy')
     args = parser.parse_args()
 
     # save configurations to file
@@ -243,11 +249,11 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
-                                   device=args.gpu, unit=args.unit))
+                                     device=args.gpu, unit=args.unit))
 
     elif args.model_type == "lstm":
         sys.stderr.write("Using Normal LSTM\n")
@@ -261,11 +267,11 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
-                                   device=args.gpu, unit=args.unit))
+                                     device=args.gpu, unit=args.unit))
 
     elif args.model_type == "charlstm":
         sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
@@ -279,26 +285,26 @@ def main():
         ))
         optimizer.setup(model)
         updater = CharLSTMUpdater(train_iter, optimizer,
-                            device=args.gpu, unit=args.unit)
+                                  device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(CharLSTMEvaluator(dev_iter, optimizer.target,
-                                    device=args.gpu, unit=args.unit))
+                                         device=args.gpu, unit=args.unit))
 
-    # 必要とあらばGPUを使う
+    # Send model to GPU (negative value indicates CPU)
     if args.gpu >= 0:
-        chainer.cuda.get_device(args.gpu).use()  # make the GPU current
+        # Specify GPU ID from command line
+        chainer.cuda.get_device(args.gpu).use()
         model.to_gpu()
 
     # load glove vector
     if args.glove:
-        sys.stderr.write("loading glove...")
+        sys.stderr.write("loading GloVe...")
         model.predictor.load_glove(args.glove, data_processor.vocab)
         sys.stderr.write("done.\n")
 
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}', trigger=(5, 'epoch')))
-
     trainer.extend(extensions.ProgressBar(update_interval=10))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(

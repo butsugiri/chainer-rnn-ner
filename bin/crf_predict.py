@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-訓練済みのモデルとDev or Testデータを入力として与えると
-NERタグの予測を出力するスクリプト
+predict BIO tags
 """
 import sys
 import chainer
@@ -14,6 +13,7 @@ from train_model import Classifier
 from NER import CRFNERTagger, CRFBiNERTagger, CRFBiCharNERTagger
 from NER import DataProcessor
 from tqdm import tqdm
+
 
 def predict(iter, model_type, model, unit):
     if model_type == "lstm" or model_type == "bilstm":
@@ -33,12 +33,13 @@ def predict(iter, model_type, model, unit):
             inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
             xs = [xp.array(batch[i][0], dtype=xp.int32) for i in inds]
             ts = [xp.array(batch[i][2], dtype=xp.int32) for i in inds]
-            xxs = [[xp.array(x, dtype=xp.int32) for x in batch[i][1]] for i in inds]
+            xxs = [[xp.array(x, dtype=xp.int32)
+                    for x in batch[i][1]] for i in inds]
 
             hx = chainer.Variable(
-                xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
+                xp.zeros((1, len(xs), unit + 50), dtype=xp.float32))
             cx = chainer.Variable(
-                xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
+                xp.zeros((1, len(xs), unit + 50), dtype=xp.float32))
             ys, ts = model.predict(xs, hx, cx, xxs, ts, train=False)
             yield ys, ts
 
@@ -53,7 +54,8 @@ def main():
                         help='bilstm / lstm / charlstm')
     parser.add_argument('--model', type=str, required=True,
                         help='path to model file')
-    parser.add_argument('--dev', action='store_true')
+    parser.add_argument('--dev', action='store_true',
+                        help='If true, use validation data')
     parser.set_defaults(dev=False)
     args = parser.parse_args()
 
@@ -102,7 +104,8 @@ def main():
 
     serializers.load_npz(args.model, model)
 
-    test_iter = chainer.iterators.SerialIterator(test, repeat=False, shuffle=False, batch_size=10)
+    test_iter = chainer.iterators.SerialIterator(
+        test, repeat=False, shuffle=False, batch_size=10)
 
     id2tag = data.id2tag
     id2vocab = data.id2vocab
