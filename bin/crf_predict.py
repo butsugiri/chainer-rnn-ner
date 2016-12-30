@@ -39,7 +39,7 @@ def predict(iter, model_type, model, unit):
                 xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
             cx = chainer.Variable(
                 xp.zeros((1, len(xs), unit+50), dtype=xp.float32))
-            ys, ts = model.predict(xs, hx, cx, ts, train=False)
+            ys, ts = model.predict(xs, hx, cx, xxs, ts, train=False)
             yield ys, ts
 
 
