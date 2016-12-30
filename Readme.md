@@ -43,9 +43,54 @@ Place CoNLL datasets `train dev test` in `data/` and run `preprocess.sh`. This c
 Then run `generate_vocab.py` and `generate_char_vocab.py` to generate vocabulary files.
 
 ## Training
+* Training the model without CRF layer: `train_model.py`
+* Training the model with CRF layer: `train_crf_model.py`
 
+Both scripts have exact same options:
+```
+usage: train_model.py [-h] [--batchsize BATCHSIZE] [--epoch EPOCH] [--gpu GPU]
+                      [--gradclip GRADCLIP] [--out OUT] [--resume RESUME]
+                      [--test] [--unit UNIT] [--glove GLOVE] [--dropout]
+                      --model-type MODEL_TYPE [--final-layer FINAL_LAYER]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --batchsize BATCHSIZE, -b BATCHSIZE
+                        Number of examples in each mini-batch
+  --epoch EPOCH, -e EPOCH
+                        Number of sweeps over the dataset to train
+  --gpu GPU, -g GPU     GPU ID (negative value indicates CPU)
+  --gradclip GRADCLIP, -c GRADCLIP
+                        Gradient norm threshold to clip
+  --out OUT, -o OUT     Directory to output the result
+  --resume RESUME, -r RESUME
+                        Resume the training from snapshot
+  --test                Use tiny datasets for quick tests
+  --unit UNIT, -u UNIT  Number of LSTM units in each layer
+  --glove GLOVE         path to glove vector
+  --dropout             use dropout?
+  --model-type MODEL_TYPE
+                        bilstm / lstm / char-bi-lstm
+  --final-layer FINAL_LAYER (**Note: ** This means nothing)
+```
 
 ## Testing
+* Testing the model without CRF layer: `predict.py`
+* Testing the model with CRF layer: `crf_predict.py`
+
+Options:
+```
+optional arguments:
+  -h, --help            show this help message and exit
+  --unit UNIT, -u UNIT  Number of LSTM units in each layer
+  --glove GLOVE         path to glove vector
+  --model-type MODEL_TYPE
+                        bilstm / lstm / charlstm
+  --model MODEL         path to model file
+  --dev
+```
+Do not forget to specify `--model-type` and `model`.
+The performance can be tested by conlleval.pl (not included in this repo.)
 
 # Result
 TBA
