@@ -7,7 +7,7 @@ from chainer.links import NStepLSTM
 from chainer import reporter
 
 
-class TaggerBase(chainer.Chain):
+class CRFTaggerBase(chainer.Chain):
 
     def __init__(self):
         pass
@@ -23,11 +23,11 @@ class TaggerBase(chainer.Chain):
                     self.embed.W.data[vocab[word]] = vec
 
 
-class NERTagger(TaggerBase):
+class CRFNERTagger(CRFTaggerBase):
     """single LSTM"""
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
-        super(TaggerBase, self).__init__(
+        super(CRFTaggerBase, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             l1=L.NStepLSTM(1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
             l2=L.Linear(embed_dim, n_tag),
@@ -66,11 +66,11 @@ class NERTagger(TaggerBase):
         return ys, ts
 
 
-class BiNERTagger(TaggerBase):
+class CRFBiNERTagger(CRFTaggerBase):
     """bi-directional LSTM"""
 
     def __init__(self, n_vocab, n_tag, embed_dim, hidden_dim, dropout):
-        super(TaggerBase, self).__init__(
+        super(CRFTaggerBase, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             forward_l1=L.NStepLSTM(
                 1, embed_dim, embed_dim, dropout=0, use_cudnn=True),
@@ -119,11 +119,11 @@ class BiNERTagger(TaggerBase):
         return ys, ts
 
 
-class BiCharNERTagger(TaggerBase):
+class CRFBiCharNERTagger(CRFTaggerBase):
     """bi-directional LSTM with char-based encoding"""
 
     def __init__(self, n_vocab, n_char, n_tag, embed_dim, hidden_dim, dropout):
-        super(TaggerBase, self).__init__(
+        super(CRFTaggerBase, self).__init__(
             embed=L.EmbedID(n_vocab, embed_dim, ignore_label=-1),
             # character embeddingは25で決め打ち
             char_embed=L.EmbedID(n_char, 25, ignore_label=-1),

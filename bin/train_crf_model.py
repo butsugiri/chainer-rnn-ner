@@ -14,7 +14,7 @@ from chainer.training import extensions
 from datetime import datetime
 
 from NER import Resource
-from NER import NERTagger, BiNERTagger, BiCharNERTagger
+from NER import CRFNERTagger, CRFBiNERTagger, CRFBiCharNERTagger
 from NER import DataProcessor
 import numpy as xp
 
@@ -195,7 +195,7 @@ def main():
     optimizer = chainer.optimizers.Adam()
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
-        model = BiNERTagger(
+        model = CRFBiNERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
@@ -212,7 +212,7 @@ def main():
 
     elif args.model_type == "lstm":
         sys.stderr.write("Using Normal LSTM\n")
-        model = NERTagger(
+        model = CRFNERTagger(
             n_vocab=len(data_processor.vocab),
             embed_dim=args.unit,
             hidden_dim=args.unit,
@@ -229,7 +229,7 @@ def main():
 
     elif args.model_type == "charlstm":
         sys.stderr.write("Using Bidirectional LSTM with character encoding\n")
-        model = BiCharNERTagger(
+        model = CRFBiCharNERTagger(
             n_vocab=len(data_processor.vocab),
             n_char=len(data_processor.char),
             embed_dim=args.unit,
