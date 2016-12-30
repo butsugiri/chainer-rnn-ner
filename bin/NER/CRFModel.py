@@ -147,8 +147,8 @@ class CRFBiCharNERTagger(CRFTaggerBase):
         else:
             self.dropout = False
 
-    def __call__(self, xs, hx, cx, ts, train=True):
-        ys, ts = self.encode_sequence(xs, hx, cx, ts, train)
+    def __call__(self, xs, hx, cx, xxs, ts, train=True):
+        ys, ts = self.encode_sequence(xs, hx, cx, xxs, ts, train)
         loss = self.crf(ys, ts)
         reporter.report({'loss': loss}, self)
 
