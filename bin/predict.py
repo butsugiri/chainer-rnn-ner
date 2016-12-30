@@ -13,6 +13,7 @@ from chainer import serializers
 from train_model import Classifier
 from NER import NERTagger, BiNERTagger, BiCharNERTagger
 from NER import DataProcessor
+from tqdm import tqdm
 
 def predict(iter, model_type, model, unit):
     if model_type == "lstm" or model_type == "bilstm":
@@ -102,7 +103,7 @@ def main():
     id2tag = data.id2tag
     id2vocab = data.id2vocab
 
-    for ys, ts in predict(test_iter, args.model_type, model, args.unit):
+    for ys, ts in tqdm(predict(test_iter, args.model_type, model, args.unit)):
         for y, t in zip(ys, ts):
             pred_ids = F.argmax(F.softmax(y), axis=1).data
             pred_labels = [id2tag[x] for x in pred_ids]
