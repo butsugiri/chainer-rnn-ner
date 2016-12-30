@@ -92,7 +92,8 @@ optional arguments:
   --dev
 ```
 Do not forget to specify `--model-type` and `model`.
-The performance can be tested by conlleval.pl (not included in this repo.)
+
+The performance (Accuracy/Precision/F-Score) can be tested by `conlleval.pl` (not included in this repo.)
 
 # Result
 TBA
