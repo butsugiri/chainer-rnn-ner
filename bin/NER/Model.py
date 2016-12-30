@@ -102,9 +102,6 @@ class BiNERTagger(TaggerBase):
         return loss, accuracy, count
 
     def encode_sequence(self, xs, hx, cx, ts, train):
-        inds = np.argsort([-len(x.data) for x in xs]).astype('i')
-        xs = [xs[i] for i in inds]
-        ts = [ts[i] for i in inds]
         xs = [self.embed(item) for item in xs]
         xs_backward = [item[::-1] for item in xs]
         if self.dropout and train:
