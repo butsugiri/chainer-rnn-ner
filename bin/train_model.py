@@ -231,7 +231,6 @@ def main():
 
     # モデルの準備
     optimizer = chainer.optimizers.Adam()
-    optimizer.add_hook(chainer.optimizer.GradientClipping(5))
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
         model = Classifier(BiNERTagger(
@@ -242,6 +241,7 @@ def main():
             dropout=args.dropout
         ))
         optimizer.setup(model)
+        optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
@@ -259,6 +259,7 @@ def main():
             dropout=args.dropout
         ))
         optimizer.setup(model)
+        optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),

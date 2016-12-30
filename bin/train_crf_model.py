@@ -220,6 +220,8 @@ def main():
             dropout=args.dropout
         )
         optimizer.setup(model)
+        optimizer.add_hook(chainer.optimizer.GradientClipping(5))
+        updater = LSTMUpdater(train_iter, optimizer,
         updater = LSTMUpdater(train_iter, optimizer,
                             device=args.gpu, unit=args.unit)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
