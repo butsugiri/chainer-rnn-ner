@@ -111,14 +111,19 @@ The performance (Accuracy/Precision/F-Score) can be tested by `conlleval.pl` (no
 | Bi-Char-LSTM | Yes  | 84.17     | 83.80  | 83.98   |
 
 ## Learning Curves
+
 epoch vs. training data loss
+
 ![epoch vs. training data loss](./images/training_data_loss.png)
 
 Epoch vs. Validation Data Loss
+
 ![epoch vs. validation data loss](./images/validation_data_loss.png)
 
 Epoch vs. Training Data Accuracy
+
 ![epoch vs. training data accuracy](./images/training_data_acuracy.png)
 
 Epoch vs. Validation Data Accuracy
+
 ![epoch vs. validation data accuracy](./images/validation_data_acuracy.png)
