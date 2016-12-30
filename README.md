@@ -1,4 +1,4 @@
-**Note: ** This repository is part of the assignment given in [Information Communication Theory (情報伝達学)](http://www.cl.ecei.tohoku.ac.jp/index.php?InformationCommunicationTheory) lecture.
+**Note:** This repository is part of the assignment given in [Information Communication Theory (情報伝達学)](http://www.cl.ecei.tohoku.ac.jp/index.php?InformationCommunicationTheory) lecture.
 
 # About
 
