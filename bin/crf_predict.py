@@ -95,7 +95,7 @@ def main():
 
     # load glove vector
     if args.glove:
-        sys.stderr.write("loading glove...")
+        sys.stderr.write("loading GloVe...")
         model.predictor.load_glove(args.glove, data.vocab)
         sys.stderr.write("done.\n")
 
