@@ -297,7 +297,7 @@ def main():
         chainer.cuda.get_device(args.gpu).use()
         model.to_gpu()
 
-    # load glove vector
+    # load GloVe vector
     if args.glove:
         sys.stderr.write("loading GloVe...")
         model.predictor.load_glove(args.glove, data_processor.vocab)
