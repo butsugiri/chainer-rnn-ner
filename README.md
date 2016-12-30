@@ -112,7 +112,7 @@ The performance (Accuracy/Precision/F-Score) can be tested by `conlleval.pl` (no
 
 ## Learning Curves
 
-epoch vs. training data loss
+Epoch vs. training data loss
 
 ![epoch vs. training data loss](./images/training_data_loss.png)
 
