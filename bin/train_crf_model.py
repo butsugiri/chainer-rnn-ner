@@ -176,7 +176,8 @@ def main():
     parser.set_defaults(dropout=False)
     parser.add_argument('--model-type', dest='model_type', type=str, required=True,
                         help='bilstm / lstm / char-bi-lstm')
-    parser.add_argument('--final-layer', default='withCRF', type=str, help='CRF as the loss function')
+    parser.add_argument('--final-layer', default='withCRF',
+                        type=str, help='CRF as the loss function')
     args = parser.parse_args()
 
     # save configurations to file
@@ -255,12 +256,12 @@ def main():
         trainer.extend(CharLSTMEvaluator(dev_iter, optimizer.target,
                                          device=args.gpu, unit=args.unit))
 
-    # 必要とあらばGPUを使う
+    # Use GPU if necessary
     if args.gpu >= 0:
         chainer.cuda.get_device(args.gpu).use()  # make the GPU current
         model.to_gpu()
 
-    # load glove vector
+    # load GloVe vector
     if args.glove:
         sys.stderr.write("loading GloVe...")
         model.load_glove(args.glove, data_processor.vocab)
