@@ -12,7 +12,7 @@ Pages 172-175
 Note that this repo is not re-implementation of these models.
 
 # Model Details
-Following models are implemented with Chainer.
+Following models are implemented by Chainer.
 
 ## Models with Cross Entropy as Loss Function
 * LSTM (Model.py/NERTagger)
@@ -71,7 +71,7 @@ optional arguments:
   --dropout             use dropout?
   --model-type MODEL_TYPE
                         bilstm / lstm / char-bi-lstm
-  --final-layer FINAL_LAYER (**Note: ** This means nothing)
+  --final-layer FINAL_LAYER (Note: This means nothing)
 ```
 
 ## Testing
