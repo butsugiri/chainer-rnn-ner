@@ -17,11 +17,12 @@ from NER import Resource
 from NER import CRFNERTagger, CRFBiNERTagger, CRFBiCharNERTagger
 from NER import DataProcessor
 import numpy as xp
+import numpy as np
 
 
 class LSTMUpdater(training.StandardUpdater):
 
-    def __init__(self, iterator, optimizer, device, unit):
+    def __init__(self, iterator, optimizer, device, unit, singleton):
         super(LSTMUpdater, self).__init__(
             iterator=iterator, optimizer=optimizer)
         if device >= 0:
@@ -29,12 +30,17 @@ class LSTMUpdater(training.StandardUpdater):
         else:
             self.xp = xp
         self.unit = unit
+        self.singleton = singleton
+        self.id2singleton = {v: k for k, v in singleton.items()}
 
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
         inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
-        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+
+        xs_with_unk = [self.replace_singleton(x[0]) for x in batch]
+
+        xs = [self.xp.array(xs_with_unk[i], dtype=self.xp.int32) for i in inds]
         ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
 
         optimizer.target.cleargrads()
@@ -47,10 +53,21 @@ class LSTMUpdater(training.StandardUpdater):
         loss.backward()
         optimizer.update()
 
+    def replace_singleton(self, x):
+        x_array = np.array(x)
+
+        is_singleton = np.array([True if idx in self.id2singleton else False for idx in x], dtype=np.bool)
+        bool_mask = np.random.randint(0, 2, size=is_singleton[is_singleton].shape).astype(np.bool)
+        is_singleton[is_singleton] = bool_mask
+
+        r = np.zeros(x_array.shape)
+        x_array[is_singleton] = r[is_singleton]
+        return x_array
+
 
 class CharLSTMUpdater(training.StandardUpdater):
 
-    def __init__(self, iterator, optimizer, device, unit):
+    def __init__(self, iterator, optimizer, device, unit, singleton):
         super(CharLSTMUpdater, self).__init__(
             iterator=iterator, optimizer=optimizer)
         if device >= 0:
@@ -58,12 +75,16 @@ class CharLSTMUpdater(training.StandardUpdater):
         else:
             self.xp = xp
         self.unit = unit
+        self.singleton = singleton
+        self.id2singleton = {v: k for k, v in singleton.items()}
 
     def update_core(self):
         batch = self._iterators['main'].next()
         optimizer = self._optimizers['main']
         inds = xp.argsort([-len(x[0]) for x in batch]).astype('i')
-        xs = [self.xp.array(batch[i][0], dtype=self.xp.int32) for i in inds]
+        xs_with_unk = [self.replace_singleton(x[0]) for x in batch]
+
+        xs = [self.xp.array(xs_with_unk[i], dtype=self.xp.int32) for i in inds]
         ts = [self.xp.array(batch[i][2], dtype=self.xp.int32) for i in inds]
         xxs = [[self.xp.array(x, dtype=self.xp.int32)
                 for x in batch[i][1]] for i in inds]
@@ -78,6 +99,16 @@ class CharLSTMUpdater(training.StandardUpdater):
         loss.backward()
         optimizer.update()
 
+    def replace_singleton(self, x):
+        x_array = np.array(x)
+
+        is_singleton = np.array([True if idx in self.id2singleton else False for idx in x], dtype=np.bool)
+        bool_mask = np.random.randint(0, 2, size=is_singleton[is_singleton].shape).astype(np.bool)
+        is_singleton[is_singleton] = bool_mask
+
+        r = np.zeros(x_array.shape)
+        x_array[is_singleton] = r[is_singleton]
+        return x_array
 
 class LSTMEvaluator(extensions.Evaluator):
 
@@ -213,7 +244,7 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                              device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit, singleton=data_processor.singleton)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
@@ -231,7 +262,7 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = LSTMUpdater(train_iter, optimizer,
-                              device=args.gpu, unit=args.unit)
+                              device=args.gpu, unit=args.unit, singleton=data_processor.singleton)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(LSTMEvaluator(dev_iter, optimizer.target,
@@ -250,7 +281,7 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.GradientClipping(5))
         updater = CharLSTMUpdater(train_iter, optimizer,
-                                  device=args.gpu, unit=args.unit)
+                                  device=args.gpu, unit=args.unit, singleton=data_processor.singleton)
         trainer = training.Trainer(updater, (args.epoch, 'epoch'),
                                    out="../result/" + start_time)
         trainer.extend(CharLSTMEvaluator(dev_iter, optimizer.target,
