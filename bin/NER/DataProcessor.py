@@ -13,6 +13,7 @@ class DataProcessor(object):
         self.dev_data_path = data_path + "dev.clean"
         self.test_data_path = data_path + "test.clean"
         self.vocab_path = data_path + "vocab.txt"
+        self.singleton_path = data_path + "singleton.txt"
         self.tag_path = data_path + "ner_tags.txt"
         self.char_path = data_path + "char.txt"
         self.test = test # whether to provide tiny datasets for quick test
@@ -30,12 +31,21 @@ class DataProcessor(object):
             self.id2vocab = {v: k for k,v in self.vocab.items()}
         sys.stderr.write("done.\n")
 
+        # load singletons
+        sys.stderr.write("loading singletons...")
+        with open(self.singleton_path, "r") as fi:
+            self.singleton = {x.split()[0]: int(x.split()[1]) for x in fi}
+            self.id2singleton = {v: k for k,v in self.singleton.items()}
+        sys.stderr.write("done.\n")
+
+        # load character vocabulary
         sys.stderr.write("loading characters...")
         with open(self.char_path, "r") as fi:
             self.char = {x.split()[0]: int(x.split()[1]) for x in fi}
             self.id2char = {v: k for k,v in self.char.items()}
         sys.stderr.write("done.\n")
 
+        # load tags (NER BIO tags)
         sys.stderr.write("loading tags...")
         with open(self.tag_path, "r") as fi:
             self.tag = {x.split()[0]: int(x.split()[1]) for x in fi}
@@ -57,14 +67,9 @@ class DataProcessor(object):
         with open(path, "r") as input_data:
             for line in input_data:
                 tokens = [x for x in json.loads(line)]
-                token_ids = [self.vocab[x["surface"]] if x["surface"] in self.vocab else self.vocab[
-                    x["pos"] + "<UNK>"] for x in tokens]
+                token_ids = [self.vocab[x["surface"]] if x["surface"] in self.vocab else self.vocab["<UNK>"] for x in tokens]
                 targets = [self.tag[x["target"]] for x in tokens]
 
                 chars = [[self.char[t] if t in self.char else self.char["<UNK>"] for t in token["raw"]] for token in tokens]
                 dataset.append((token_ids, chars, targets))
         return dataset
-
-if __name__ == '__main__':
-    data = DataProcessor("../../work/", -1, True)
-    data.prepare()
