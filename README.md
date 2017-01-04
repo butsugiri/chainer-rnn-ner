@@ -1,6 +1,6 @@
 **Note:** This repository is part of the assignment given in Tohoku University - [Information Communication Theory (情報伝達学)](http://www.cl.ecei.tohoku.ac.jp/index.php?InformationCommunicationTheory) lecture.
 
-Students were actually expected to do some feature engineering with [CRFsuite](http://www.chokkan.org/software/crfsuite/) but I personally preferred to implement RNN.
+Students were actually expected to do some feature engineering with [CRFsuite](http://www.chokkan.org/software/crfsuite/) but I personally preferred implementing RNN.
 
 # About
 
