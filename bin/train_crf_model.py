@@ -231,7 +231,7 @@ def main():
         dev, batch_size=args.batchsize, repeat=False)
 
     # モデルの準備
-    optimizer = chainer.optimizers.Adam()
+    optimizer = chainer.optimizers.SGD(lr=0.01)
     if args.model_type == "bilstm":
         sys.stderr.write("Using Bidirectional LSTM\n")
         model = CRFBiNERTagger(
@@ -300,6 +300,9 @@ def main():
 
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}', trigger=chainer.training.triggers.MaxValueTrigger('validation/main/accuracy')))
+    trainer.extend(extensions.ExponentialShift(
+        attr='lr', rate=0.1, target=0.0001
+    ), trigger=(5, 'epoch')) #SGD
 
     trainer.extend(extensions.ProgressBar(update_interval=10))
     trainer.extend(extensions.LogReport())
