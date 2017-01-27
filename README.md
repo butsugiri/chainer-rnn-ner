@@ -13,7 +13,7 @@ Pages 172-175
 
 Note that this repo is not re-implementation of these models.
 
-The purpose of implementing models is to see how the performance improves when I change the model architecture from simple models to more complicated models, which are reported to perform well (e.g. LSTM --> Bidirectional LSTM --> Bidirectional LSTM with Character-Encoding)
+The purpose of implementing models is to see how the performance improves when I complicate model architectures (e.g. LSTM --> Bidirectional LSTM --> Bidirectional LSTM with Character-Encoding)
 
 I suppose that this model can be applied to other (sequential labeling) tasks, but I have not yet tried.
 
